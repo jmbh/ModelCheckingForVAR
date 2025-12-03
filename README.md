@@ -9,3 +9,4 @@ The archive consists of the following files and folders:
 - `2_Preprocess_EmpData.R` contains code that takes the empirical data shared by Grommisch et al. (2020) on OSF, and slightly reprocesses it into the form we use it in our empirical analysis. The original data are in the folder `Data/Grommisch2020` and the processed datafile is saved in `Data/Grommisch2020_subset.RDS`
 - `3_EmpData_Analysis_R.R` fits the mlVAR model to the empirical data using the R-package *mlVAR*, performs model checks, and creates the figures shown in the paper.
 - `4_Misc.R` is creating the time series plots used in Figure 1
+- `sessionInfo()` contains the sessionInfo() output of the R-session we used to create all results in this archive.
