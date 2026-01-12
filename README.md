@@ -1,6 +1,6 @@
 ## Code Archive for "Model Checking for Vector Autoregressive Models"
 
-This code archive contains the code to reproduce all results reported in the paper "Model Checking for Vector Autoregressive Models" (Preprint: XXX). We prepared this archive also in order to make it easy for researchers to conduct the same model checks we perform in our paper on their own data. 
+This code archive contains the code to reproduce all results reported in the paper "Model Checking for Vector Autoregressive Models" ([Preprint](https://doi.org/10.31234/osf.io/k6uz4_v2 )). We prepared this archive also in order to make it easy for researchers to conduct the same model checks we perform in our paper on their own data. 
 
 The archive consists of the following files and folders:
 
