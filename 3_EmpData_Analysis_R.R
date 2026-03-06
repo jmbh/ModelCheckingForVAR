@@ -1,4 +1,4 @@
-# jonashaslbeck@protonmail.com; Nov 20th, 2025
+# jonashaslbeck@protonmail.com; March 2026
 
 # ------------------------------------------
 # -------- What is happening here? ---------
@@ -73,22 +73,46 @@ labels <- capitalize_first(colnames(data)[4:7])
 #                    temporal = "correlated",
 #                    scale = TRUE,
 #                    verbose = FALSE)
-# saveRDS(mlVAR_out, "Files/Mod_Paper_mlVAR_Grommisch_wRes.RDS")
+# saveRDS(mlVAR_out, "Files/Mod_Paper_mlVAR_Grommisch.RDS")
 
 # We load the estimated model
-mlVAR_out <- readRDS("Files/Mod_Paper_mlVAR_Grommisch_wRes.RDS")
+mlVAR_out <- readRDS("Files/Mod_Paper_mlVAR_Grommisch.RDS")
 
+residuals(mlVAR_out)
+predict(mlVAR_out)
 
 # ------------------------------------------
 # -------- Compute Residuals ---------------
 # ------------------------------------------
 
-# We use the function ResAnalysis() from 0_Helpers.R
+# Get predictions and residuals using new mlVAR functions
+res <- residuals(mlVAR_out)
+pred <- predict(mlVAR_out)
+
+# Loop over subjects
 l_ResObj <- list()
-for(i in 1:n_ptp) l_ResObj[[i]] <- ResAnalysis(model = mlVAR_out,
-                                               data = data,
-                                               subject = i, 
-                                               newmlVAR = FALSE) # For now, until the mlVAR residual output includes the NA-structure; but for people reusing this: definitely use this option, because it makes the residual function much more general!!
+for(i in 1:n_ptp) {
+  # Subset 
+  emp_i <- data[data$id == u_ptp[i], 4:7]
+  pred_i <- pred[pred$id == u_ptp[i], 4:7]
+  res_i <- res[res$id == u_ptp[i], 4:7]
+  
+  # Compute Prediction Errors
+  v_RMSE <- apply(res_i, 2, function(x) sqrt(mean(na.omit(x)^2)))
+  v_R2 <- rep(NA, 4)
+  for(j in 1:4) v_R2[i] <- 1 - var(emp_i[, j], na.rm = TRUE) / var(res_i[, j], na.rm = TRUE)  
+  
+  # Compute Residual variance (for PPCs below)
+  ResVAR <- apply(res_i, 2, function(x) var(x, na.rm=TRUE))
+  
+  # Save
+  l_ResObj[[i]] <- list(Emp = emp_i,
+                        Pred = pred_i,
+                        Res = res_i,
+                        R2 = v_R2,
+                        RMSE = v_RMSE, 
+                        ResVar = ResVAR)
+} # end: for
 
 
 # ------------------------------------------
@@ -99,6 +123,7 @@ for(i in 1:n_ptp) l_ResObj[[i]] <- ResAnalysis(model = mlVAR_out,
 l_PPCs <- list()
 for(i in 1:n_ptp) l_PPCs[[i]] <- SimPPC(data = data,
                                         model = mlVAR_out,
+                                        ResObj = l_ResObj,
                                         subject = i,
                                         Nt = 200)
 
@@ -111,6 +136,10 @@ for(i in 1:n_ptp) l_PPCs[[i]] <- SimPPC(data = data,
 # ----- Selected ----
 # -------------------
 
+# TODO: adapt plots for [100] scale
+# TODO: THen also adapt for below plots with all
+
+
 # Here we make separate plots for the three selected persons we show in the paper
 sel <- c(6, 33, 133)
 
@@ -119,8 +148,8 @@ round(out_sel$R2, 2)
 round(out_sel$RMSE, 2)
 
 for(i in sel) {
-  pdf(paste0("Figures/Fig_EmpAnalysis_R_Diagnostics_", i, ".pdf"), width=11, height=9.5)
-
+  pdf(paste0("Figures/Fig_EmpAnalysis_R_Diagnostics_", i, "_v2.pdf"), width=11, height=9.5)
+  
   # Set up plotting area
   lmat <- matrix(6:40, nrow=5, byrow = TRUE)
   lmat <- cbind(1:5, lmat)
@@ -128,7 +157,7 @@ for(i in sel) {
                heights = c(0.1, 1, 1, 1, 1),
                widths = c(0.1, 1,0.15,1,0.15, 1,1,0.15))
   # layout.show(lo)
-
+  
   # ----- Plot Labels -----
   cex_lab <- 1.8
   ## Y-axis
@@ -142,11 +171,11 @@ for(i in sel) {
   PlotLabel("Residuals vs. Predictions", cex=cex_lab)
   PlotLabel("Simulated Data", cex=cex_lab)
   PlotLabel("", cex=cex_lab)
-
-
+  
+  
   # ----- Plot Data -----
   for(j in 1:4) {
-
+    
     Plot1Row(x = l_ResObj[[i]]$Emp[, j],
              x_hat= l_ResObj[[i]]$Pred[, j],
              x_res = l_ResObj[[i]]$Res[, j],
@@ -154,16 +183,17 @@ for(i in sel) {
              R2 = round(l_ResObj[[i]]$R2[j], 2),
              RMSE = round(l_ResObj[[i]]$RMSE[j], 2),
              legend = c(TRUE, FALSE, FALSE, FALSE)[j],
-             ylim=c(-5,5),
+             ylim=c(0,100),
+             ylim_res = c(-50, 50),
              alpha = 0.4,
              showresAR = TRUE,
              colpred = "orange",
              cex_info=1)
-
+    
   } # end for: j
-
+  
   dev.off()
-
+  
 }
 
 
@@ -463,9 +493,9 @@ for(i in 1:4) for(j in 1:4) {
   xlim <- c(-0.65, .65)
   ylim=c(0,100)
   hist_data <- hist(a_phi[i, j, ], 
-       breaks=seq(xlim[1], xlim[2], length=40), 
-       xlim=c(xlim[1], xlim[2]), 
-       main="", xlab="", axes=F, ylim=c(0,100))
+                    breaks=seq(xlim[1], xlim[2], length=40), 
+                    xlim=c(xlim[1], xlim[2]), 
+                    main="", xlab="", axes=F, ylim=c(0,100))
   grid()
   hist(a_phi[i, j, ], 
        breaks=seq(xlim[1], xlim[2], length=40), 

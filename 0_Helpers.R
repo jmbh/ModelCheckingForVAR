@@ -105,7 +105,8 @@ Plot1Row <- function(x,
                      R2 = NULL,
                      RMSE = NULL,
                      showresAR=FALSE,
-                     ylim=c(-2, 2),
+                     ylim=c(0, 100),
+                     ylim_res = c(-50, 50),
                      legend=FALSE,
                      alpha = 0.6,
                      colpred = "blue",
@@ -148,7 +149,7 @@ Plot1Row <- function(x,
   # 2) Residuals x Time
   par(mar=mar_ts)
   plot.new()
-  plot.window(xlim=c(1, 200), ylim=ylim)
+  plot.window(xlim=c(1, 200), ylim=ylim_res)
   grid()
   axis(1)
   axis(2, las=2)
@@ -256,6 +257,8 @@ f_pdb <- function(dayvar, beepvar) {
 # -------------------------------------------------
 # -------- Residual Analysis ----------------------
 # -------------------------------------------------
+# UPDATE BELOW
+
 # Takes as input either:
 # - A list with matrices with intercepts and an array with phi-matrices
 # - or the output object of the mlVAR() function
@@ -266,142 +269,84 @@ f_pdb <- function(dayvar, beepvar) {
 # - the extraced person-specific VAR parameters
 # - RMSE and R2 for each variable
 
+
 ResAnalysis <- function(model,
                         data = data,
-                        newmlVAR = FALSE, # This uses a new version of mlVAR that directly provides the residuals
                         subject) {
   
-  # ---- Take residuals from mlVAR output ----
-  if(newmlVAR) {
+  # ------------------------
+  # ----- 3) Mplus ---------
+  # ------------------------
+  
+  # ---- Some Basic info ----
+  u_pers <- unique(data$id)
+  vars <- model$vars
+  p <- length(vars)
+  
+  # Get parameters
+  phi_1 <- model$Ind_phi[ , , subject] 
+  intc <- (diag(p) - phi_1) %*% matrix(model$Ind_mu[ subject, ], nrow=p) # Transform to intercepts
+  
+  # ---- Prepare data ----
+  # Subset Data
+  data_j <- data[data$id==u_pers[subject], ]
+  # Within-person scale data
+  # Joran: Mplus: Within-person scaling to match standardized coefficients
+  
+  data_j_sc <- data_j
+  data_j_sc[, vars] <- apply(data_j[, vars], 2, scale)
+  N <- nrow(data_j)
+  
+  # Find out which data points are predictable by VAR(1)
+  pdb_j <- f_pdb(data_j$day, data_j$beep)
+  
+  # ----- Loop Through Variables & Compute Residuals ----
+  a_res <- array(NA, dim=c(N, p, 3))
+  
+  for(i in 1:p) {
+    ## Compute Residuals
+    emp <- data_j_sc[, vars[i]] # Empirical Data
+    pred <- intc[i] + rowSums(as.matrix(data_j_sc[, vars]) %*% matrix(phi_1[i, ], nrow=p) )
     
-    u_ptp <- unique(mlVAR_out$step1_residuals$id)
+    pred[pdb_j==FALSE] <- NA # Flag time points for which predictions are not possible at lag1
+    res <- emp - pred # Residuals
     
-    # Subset for person i
-    res_i <- mlVAR_out$step1_residuals[mlVAR_out$step1_residuals$id == u_ptp[subject], 1:4]
-    emp_i <- mlVAR_out$data[mlVAR_out$data$id == u_ptp[subject], model$fit$var]
-    pred_i <- emp_i - res_i
+    # Save
+    a_res[, i, 1] <- emp
+    a_res[, i, 2] <- pred
+    a_res[, i, 3] <- res
     
-    # Get model parameters
-    phi_1 <- getNet(model, type="temporal", subject=subject, verbose=FALSE)
-    # Get the intercepts
-    mu_1 <- model$results$mu$subject[[subject]]
-    
-    # ----- Compute Fit Measures ------
-    v_RMSE <- apply(res_i, 2, function(x) {
-      sqrt(mean(na.omit(x)^2))
-    })
-    
-    p <- length(model$fit$var)
-    v_R2 <- rep(NA, p)
-    for(i in 1:p) v_R2[i] <- 1 - var(res_i[, i], na.rm = TRUE) / var(emp_i[, i], na.rm = TRUE)
-    
-    # ----- Calculate Residual variances ------
-    ResVAR <- apply(res_i, 2, function(x) var(x, na.rm=TRUE))
-    
-    # ----- Get in the original missing pattern (For Plotting) -----
-    id_miss <- apply(data[, model$fit$var], 1, function(x) any(is.na(x)))
-    
-    # ----- Return -----
-    outlist <- list("Emp" = emp_i,
-                    "Pred" = pred_i,
-                    "Res" = res_i,
-                    "ResVar" = ResVAR,
-                    "phi" = phi_1,
-                    "intc" = mu_1,
-                    "RMSE" = v_RMSE,
-                    "R2" = v_R2,
-                    "id" = res_i$id[1],
-                    "vars" = vars)
-    
-    # ---- Compute Residuals manually (before Sacha's mlVAR implementation that provides residuals directly) ----
-  } else {
-    
-    # ---- Drop NA -----
-    data <- na.omit(data)
-    
-    # ---- Some Basic info ----
-    j <- subject
-    u_pers <- unique(data$id)
-    if(class(model) == "mlVAR") {
-      vars <- model$fit$var
-    } else {
-      vars <- model$vars
-    }
-    p <- length(vars)
-    
-    # ---- Get parameters from output ----
-    if(class(model) == "mlVAR") {
-      # Get Lagged effects
-      phi_1 <- getNet(model, type="temporal", subject=j, verbose=FALSE)
-      # Get the intercepts
-      mu_1 <- model$results$mu$subject[[j]]
-      # intc <- (diag(p) - phi_1) %*% matrix(mu_1, nrow=p) # Getting intercepts with c = (I-phi)mu
-      # intc <- as.numeric(intc)
-      intc <- mu_1 # check with Sacha whether mus are intercepts; Yes they are!
-      
-    } else {
-      phi_1 <- model$Ind_phi[ , , j] 
-      intc <- model$Ind_mu[ j, ] 
-    }
-    
-    # ---- Prepare data ----
-    # Grand-mean center and scale data
-    data_sc <- data
-    data_sc[, 4:7] <- as.data.frame(apply(data[, 4:7], 2, scale))
-    
-    # Subset Data
-    data_j <- data_sc[data_sc$id==u_pers[j], ]
-    N <- nrow(data_j)
-    
-    # Find out which data points are predictable by VAR(1)
-    pdb_j <- f_pdb(data_j$day, data_j$beep)
-    
-    # ----- Loop Through Variables & Compute Residuals ----
-    a_res <- array(NA, dim=c(N, p, 3))
-    for(i in 1:p) {
-      # Center predictors
-      data_jc <- data_j
-      data_jc[, -c(1:3, i+3)] <- apply(data_j[, -c(1:3, i+3)], 2, function(x) x - mean(x, na.rm=TRUE))
-      
-      ## Compute
-      # Empirical Data
-      a_res[, i, 1] <- Emp_ji <- data_jc[, vars[i]]
-      a_res[, i, 1][pdb_j==FALSE] <- NA
-      # Prediction
-      a_res[2:N, i, 2] <- intc[i] + rowSums(as.matrix(data_jc[-N, vars])  %*% matrix(phi_1[i, ], nrow=p)) # Predict with VAR
-      a_res[, i, 2][pdb_j==FALSE] <- NA # Set predictions that are not over lag-1 to zero (Yes, this is a bit ugly!)
-      # Residual
-      a_res[, i, 3] <- Emp_ji - a_res[, i, 2]
-    } # end for i
-    
-    # ----- Compute Fit Measures ------
-    v_RMSE <- apply(a_res[, , 3], 2, function(x) {
-      sqrt(mean(na.omit(x)^2))
-    })
-    
-    v_R2 <- rep(NA, p)
-    for(i in 1:p) v_R2[i] <- 1 - var(a_res[, i, 3], na.rm = TRUE) / var(a_res[, i, 1], na.rm = TRUE)
-    
-    # ----- Calculate Residual variances ------
-    ResVAR <- apply(a_res[, , 3], 2, function(x) var(x, na.rm=TRUE))
-    
-    # ----- Return -----
-    outlist <- list("Emp" = a_res[, , 1],
-                    "Pred" = a_res[, , 2],
-                    "Res" = a_res[, , 3],
-                    "ResVar" = ResVAR,
-                    "phi" = phi_1,
-                    "intc" = intc,
-                    "RMSE" = v_RMSE,
-                    "R2" = v_R2,
-                    "id" = data_j$id[1],
-                    "vars" = vars)
-    
-  } # end if: Old mlVAR
+  } # end for i (variables)
+  
+  # ----- Compute Fit Measures ------
+  v_RMSE <- apply(a_res[, , 3], 2, function(x) {
+    sqrt(mean(na.omit(x)^2))
+  })
+  
+  v_R2 <- rep(NA, p)
+  for(i in 1:p) v_R2[i] <- 1 - var(a_res[, i, 3], na.rm = TRUE) / var(a_res[, i, 1], na.rm = TRUE)
+  
+  # ----- Calculate Residual variances ------
+  ResVAR <- apply(a_res[, , 3], 2, function(x) var(x, na.rm=TRUE))
+  
+  # ----- Return ----------------
+  
+  outlist <- list("Emp" = a_res[, , 1],
+                  "Pred" = a_res[, , 2],
+                  "Res" = a_res[, , 3],
+                  "ResVar" = ResVAR,
+                  "phi" = phi_1,
+                  "intc" = intc,
+                  "RMSE" = v_RMSE,
+                  "R2" = v_R2,
+                  "id" = data_j$id[1],
+                  "vars" = vars)
   
   return(outlist)
   
 } # eoF
+
+
 
 
 # -------------------------------------------------
@@ -411,15 +356,9 @@ ResAnalysis <- function(model,
 SimPPC <- function(data,
                    model,
                    subject,
+                   ResObj,
                    init,
                    Nt) {
-  
-  # ---- Get basic info ----
-  if(class(model) == "mlVAR") {
-    vars <- model$fit$var
-  } else {
-    vars <- model$vars
-  }
   
   # ---- Get Parameters for Given Subject -----
   if(class(model) == "mlVAR") {
@@ -434,34 +373,8 @@ SimPPC <- function(data,
     intc <- model$Ind_mu[subject,] 
   }
   
-  # ---- Subset Data ----
-  u_ptp <- unique(data$id)
-  data_j <- data[data$id==u_ptp[subject], ]
-  N <- nrow(data_j)
-  
-  # ---- Compute Residuals to get Residual Variance ----
-  pdb_j <- f_pdb(data_j$day, data_j$beep)
-  # For mlVAR: scale data
-  data_j_sc <- data_j
-  data_j_sc[, 4:7] <- apply(data_j_sc[, 4:7], 2, scale)
-  data_j <- data_j_sc
-  
-  p <- 4
-  a_res <- array(NA, dim=c(N, p, 3))
-  for(i in 1:p) {
-    ## Compute
-    # Empirical Data
-    a_res[, i, 1] <- Emp_ji <- data_j[, vars[i]]
-    a_res[, i, 1][pdb_j==FALSE] <- NA
-    # Prediction
-    a_res[2:N, i, 2] <- intc[i] + rowSums(as.matrix(data_j[-N, vars])  %*% matrix(phi_1[i, ], nrow=p)) # Predict with VAR
-    a_res[, i, 2][pdb_j==FALSE] <- NA # Set predictions that are not over lag-1 to zero (this could be done in a safer way ...)
-    # Residual
-    a_res[, i, 3] <- Emp_ji - a_res[, i, 2]
-  } # end for i
-  # Compute residual variances
-  res_sd <- apply(a_res[, , 3], 2, sd, na.rm=TRUE)
-  m_res <- diag(p) * res_sd^2 # residual covariance matrix
+  # ---- Get Residual Variance ----
+  m_res <- ResObj[[subject]]$ResVar
   
   # ---- Simulate Data -----
   data_sim <- simulateVAR(pars = phi_1,
@@ -471,7 +384,7 @@ SimPPC <- function(data,
   
   
   # ---- Compile Outlist -----
-  outlist <- list("data_emp" = data_j[, 4:7],
+  outlist <- list("data_emp" =  ResObj[[subject]]$Emp,
                   "data_sim" = data_sim,
                   "subj" = u_ptp[subject])
   
