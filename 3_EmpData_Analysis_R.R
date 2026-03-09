@@ -27,9 +27,9 @@ library(reshape2)
 
 # Plotting
 library(RColorBrewer)
-library(ggplot2)
 library(qgraph)
 library(ggplot2)
+library(patchwork)
 
 # For testing trends
 library(lmtest)
@@ -125,12 +125,25 @@ for(i in 1:n_ptp) l_PPCs[[i]] <- SimPPC(data = data,
                                         model = mlVAR_out,
                                         ResObj = l_ResObj,
                                         subject = i,
-                                        Nt = 200)
+                                        Nt = nrow(l_ResObj[[i]]$Emp)) # simulate length of original time series
 
 
 # ------------------------------------------
 # -------- Diagnostic Plots ----------------
 # ------------------------------------------
+
+
+# -------------------
+# ----- New: ggplot2 ----
+# -------------------
+
+subject <-  3
+pdf(paste0("Figures/Fig_EmpAnalysis_R_Diagnostics_", subject, "_ggplot.pdf"), width=11, height=9.5)
+PlotDiagnostics(l_ResObj = l_ResObj, 
+                l_PPC = l_PPCs,  
+                subject = subject)
+dev.off()
+
 
 # -------------------
 # ----- Selected ----

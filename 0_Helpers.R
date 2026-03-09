@@ -18,6 +18,187 @@
 
 library(scales)
 
+
+# ------------------------------------------
+# -------- Diagnostic Plots (ggplot new) ---
+# ------------------------------------------
+
+PlotDiagnostics <- function(l_ResObj, 
+                            l_PPCs, 
+                            subject) {
+  
+  
+  l_row_plots <- list()
+  
+  for(j in 1:4) {
+  
+    # Make df with all we need
+    N_data <- length(l_ResObj[[subject]]$Emp[, j])
+    df_i <- data.frame(time = 1:N_data,
+                       emp = l_ResObj[[subject]]$Emp[, j], 
+                       pred = l_ResObj[[subject]]$Pred[, j], 
+                       res = l_ResObj[[subject]]$Res[, j], 
+                       sim = l_PPCs[[subject]]$data_sim[, j])
+    
+    
+    # ---- Panel A: Data & Prediction
+    # Plot 1: Line plot data + predictions
+    p_line <- ggplot(df_i, aes(time, emp)) +
+      geom_line() +
+      theme_minimal() + 
+      geom_line(aes(y = pred), color = "orange") +
+      coord_cartesian(ylim = c(0, 100)) + 
+      theme(
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()
+      )
+    
+    # histogram of y
+    mu <- mean(df_i$emp, na.rm = TRUE)
+    sd <- sd(df_i$emp, na.rm = TRUE)
+    p_hist <- ggplot(df_i, aes(emp)) +
+      geom_histogram(aes(y = after_stat(density)), bins = 20) +
+      coord_flip(xlim = c(0, 100)) +
+      theme_minimal() +
+      stat_function(
+        fun = dnorm,
+        args = list(mean = mu, sd = sd),
+        linewidth = 1
+      ) +
+      theme(
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.grid = element_blank()
+      )
+    # ---- Panel B: Residuals over time
+    p_line_res <- ggplot(df_i, aes(time, res)) +
+      geom_line() +
+      theme_minimal() +
+      coord_cartesian(ylim = c(-60, 60)) + theme(
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()
+      )
+    mu <- mean(df_i$res, na.rm = TRUE)
+    sd <- sd(df_i$res, na.rm = TRUE)
+    p_hist_res <- ggplot(df_i, aes(res)) +
+      geom_histogram(aes(y = after_stat(density)), bins = 20) +
+      coord_flip(xlim = c(-60, 60)) +
+      theme_minimal() +
+      stat_function(
+        fun = dnorm,
+        args = list(mean = mu, sd = sd),
+        linewidth = 1
+      ) +
+      theme(
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.grid = element_blank()
+      )
+    
+    # p_line_res + p_hist_res
+    # ---- Panel C: Scatter Plot:
+    p_scatter <- ggplot(df_i, aes(x = res, y = pred)) +
+      geom_point(alpha = 0.4) + 
+      theme_minimal() +
+      coord_cartesian(ylim = c(0, 100), 
+                      xlim = c(-60, 60)) + 
+      theme(
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()
+      )
+    # ---- Panel D: Data Simulated from Estimated Model
+    p_line_sim <- ggplot(df_i, aes(time, sim)) +
+      geom_line() +
+      theme_minimal() +
+      coord_cartesian(ylim = c(0, 100)) + theme(
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()
+      )
+    mu <- mean(df_i$sim, na.rm = TRUE)
+    sd <- sd(df_i$sim, na.rm = TRUE)
+    p_hist_sim <- ggplot(df_i, aes(sim)) +
+      geom_histogram(aes(y = after_stat(density)), bins = 20) +
+      coord_flip(xlim = c(0, 100)) +
+      theme_minimal() +
+      stat_function(
+        fun = dnorm,
+        args = list(mean = mu, sd = sd),
+        linewidth = 1
+      ) +
+      theme(
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.grid = element_blank()
+      )
+    
+    p_line_sim + p_hist_sim
+    
+    l_row_plots[[j]] <- list(p_line,
+                             p_hist,
+                             p_line_res,
+                             p_hist_res,
+                             p_scatter,
+                             p_line_sim,
+                             p_hist_sim)
+    
+  } # end for: plot rows
+  
+  
+  # Createlabels
+  label_plot <- function(label, angle = 0, size = 5) {
+    ggplot() +
+      annotate("text", x = 0.5, y = 0.5, label = label, angle = angle, size = size) +
+      theme_void() +
+      coord_cartesian(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE)
+  }
+  col1 <- label_plot("   Empirical & Predicted")
+  col2 <- label_plot("   Residuals")
+  col3 <- label_plot("Residual vs. Predicted")
+  col4 <- label_plot("   Simulated")
+  
+  row1l <- label_plot("Happy", angle = 90)
+  row2l <- label_plot("Relaxed", angle = 90)
+  row3l <- label_plot("Sad", angle = 90)
+  row4l <- label_plot("Angry", angle = 90)
+  
+  # Break up into lists for nicer looking code below:
+  r1 <- l_row_plots[[1]]
+  r2 <- l_row_plots[[2]]
+  r3 <- l_row_plots[[3]]
+  r4 <- l_row_plots[[4]]
+  
+  # Assemble all
+  widths <- c(0.6, 4, 1, 4, 1, 4, 4, 1)
+  heights <- c(0.6, 4, 4, 4, 4)
+  top_row <- plot_spacer() + 
+    col1 + plot_spacer() + col2 + plot_spacer() + col3 + col4 + plot_spacer() +
+    plot_layout(widths = widths)
+  row1 <- (row1l + r1[[1]] + r1[[2]] + r1[[3]] + r1[[4]] + r1[[5]] + r1[[6]] + r1[[7]]) +
+    plot_layout(widths = widths)
+  row2 <- (row2l + r2[[1]] + r2[[2]] + r2[[3]] + r2[[4]] + r2[[5]] + r2[[6]] + r2[[7]]) +
+    plot_layout(widths = widths)
+  row3 <- (row3l + r3[[1]] + r3[[2]] + r3[[3]] + r3[[4]] + r3[[5]] + r3[[6]] + r3[[7]]) +
+    plot_layout(widths = widths)
+  row4 <- (row4l + r4[[1]] + r4[[2]] + r4[[3]] + r4[[4]] + r4[[5]] + r4[[6]] + r4[[7]]) +
+    plot_layout(widths = widths)
+  
+  
+  top_row / row1 / row2 / row3 / row4 + plot_layout(heights = heights)
+  
+} # End of ggplot function
+
 # ------------------------------------------
 # -------- Fit AR(1), Predict, Residuals ---
 # ------------------------------------------
@@ -362,11 +543,35 @@ SimPPC <- function(data,
   
   # ---- Get Parameters for Given Subject -----
   if(class(model) == "mlVAR") {
+    
     # Get Lagged effects
-    phi_1 <- getNet(model, type="temporal", subject=subject, verbose=FALSE)
+    phi_1 <- getNet(model, 
+                    type = "temporal", 
+                    subject = subject, 
+                    verbose = FALSE)
     # Get the intercepts
-    mu_1 <- model$results$mu$subject[[subject]]
-    intc <- mu_1 # Those are intercepts
+    # mu_1 <- model$results$mu$subject[[subject]]
+    # intc <- mu_1 # Those are intercepts
+
+    # --- Rescale regression coefficients back to [0, 100]-scale ---
+    # TO FIX: The below is roughly correct, but not exactly, because:
+    # - mlVAR might rescale slightly differently
+    # - There might be some interaction between scaling and mixed effects estimation
+    # - Unknown unknowns in mlVAR
+    
+    # Get standard deviations of all variables across whole dataset
+    sds <- apply(data[, c("happy", "relaxed", "sad", "angry")], 2, sd, na.rm=TRUE)
+    # Rescaling with matrix calc; parameter wise I rescale with fraction: sd_predicted / sd_predictor
+    D <- diag(sds)
+    phi_1_resc <- D %*% phi_1 %*% solve(D)
+    phi_1 <- phi_1_resc
+    
+    # Compute sample mean
+    u_ptp <- unique(data$id)
+    data_j <- data[data$id == u_ptp[[subject]], c("happy", "relaxed", "sad", "angry")]
+    mu_emp <- apply(data_j[, c("happy", "relaxed", "sad", "angry")], 2, mean, na.rm=TRUE)
+    # Compute Intercept
+    intc <- (diag(4) - phi_1_resc) %*% mu_emp
     
   } else {
     phi_1 <- model$Ind_phi[,,subject] 
@@ -376,9 +581,11 @@ SimPPC <- function(data,
   # ---- Get Residual Variance ----
   m_res <- ResObj[[subject]]$ResVar
   
+  # browser()
+  
   # ---- Simulate Data -----
   data_sim <- simulateVAR(pars = phi_1,
-                          means = intc,
+                          means = as.numeric(intc),
                           Nt = Nt,
                           residuals = m_res) # residual variance = 1
   
