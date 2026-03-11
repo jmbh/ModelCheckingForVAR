@@ -136,16 +136,16 @@ l_synth[[8]] <- x
 
 l_out <- list()
 for(i in 1:8) {
-
+  
   # ---- Predict with AR(1) Model -----
   fitAR1 <- FitAR1(l_synth[[i]])
   xhat <- fitAR1$xhat
   res <- fitAR1$res
   res_var <- fitAR1$res_var
-
+  
   # ---- PPC -----
   out_AR1PPC <- AR1PPC(fitAR1$lm_mod, fitAR1$res_var, N, seed=92)
-
+  
   # ---- Save in List ----
   l_out[[i]] <- list(x = l_synth[[i]],
                      xhat = xhat,
@@ -178,161 +178,50 @@ fitAR1_3$R2
 fitAR1_3$RMSE
 
 
+
 # -----------------------------------------------
 # ----- Figure: Correctly specified AR(1) -------
 # -----------------------------------------------
 
-sel <- 1:2
-v_names <- c("Dependence", "Independence")
-
-# --- Plotting ----
-pdf("Figures/Fig_AR1_Correct.pdf",  width=11, height=6)
-
-# Set up plotting area
-lmat <- matrix(4:24, nrow=3, byrow = TRUE)
-lmat <- cbind(1:3, lmat)
-lo <- layout(mat = lmat,
-             heights = c(0.1, 1, 1, 1, 1),
-             widths = c(0.1, 1,0.15,1,0.15, 1,1,0.15))
-# layout.show(lo)
-
-## Plot Labels
-cex_lab <- 1.5
-## Row labels
-PlotLabel("", cex=cex_lab)
-PlotLabel(v_names[1], cex=cex_lab, srt = 90)
-PlotLabel(v_names[2], cex=cex_lab, srt = 90)
-## Column labels
-PlotLabel("Data & Predictions", cex=cex_lab, ypos=0.3)
-PlotLabel("", cex=cex_lab)
-PlotLabel("   Residuals vs. Time", cex=cex_lab)
-PlotLabel("", cex=cex_lab)
-PlotLabel("Residuals vs. Predictions", cex=cex_lab)
-PlotLabel("Simulated Data", cex=cex_lab)
-PlotLabel("", cex=cex_lab)
-
-## Plot Data
-for(i in 1:2) {
-  i_sel <- sel[i]
-  Plot1Row(x = l_out[[i]]$x,
-           x_hat= l_out[[i]]$xhat,
-           x_res = l_out[[i]]$res,
-           x_ppc = l_out[[i]]$xsim,
-           R2 = FitAR1(l_out[[i]]$x)$R2,
-           RMSE = FitAR1(l_out[[i]]$x)$RMSE,
-           ylim=c(-5, 5),
-           showresAR = TRUE,
-           xlab=c(FALSE, TRUE)[i],
-           legend=TRUE, colpred = "orange")
-}
-
+pdf("Figures/Fig_AR1_Correct_ggplot.pdf",  width=11, height=6)
+PlotDiagnosticsSim(l_out = l_out, 
+                   sel = 1:2, 
+                   labels = c("Dependence", "Independence"), 
+                   legpos = "topleft", 
+                   ylim_data = c(-4,4), 
+                   ylim_res = c(-4,4), 
+                   v_legend = c(TRUE, FALSE))
 dev.off()
+
 
 # -----------------------------------------------
 # ----- Figure: Three Main Misspecifications ----
 # -----------------------------------------------
 
-sel <- c(4,3,5)
-v_names <- c("Trend", "Switching/Non-Linear", "Changing Innovations")
-
-# --- Plotting ----
-pdf("Figures/Fig_AR1_Misspecified_Main.pdf",  width=11, height=8)
-
-# Set up plotting area
-lmat <- matrix(5:32, nrow=4, byrow = TRUE)
-lmat <- cbind(1:4, lmat)
-lo <- layout(mat = lmat,
-             heights = c(0.1, 1, 1, 1, 1),
-             widths = c(0.1, 1,0.15,1,0.15, 1,1,0.15))
-# layout.show(lo)
-
-## Plot Labels
-cex_lab <- 1.5
-## Row labels
-PlotLabel("", cex=cex_lab)
-PlotLabel(v_names[1], cex=cex_lab, srt = 90)
-PlotLabel(v_names[2], cex=cex_lab, srt = 90)
-PlotLabel(v_names[3], cex=cex_lab, srt = 90)
-## Column labels
-PlotLabel("Data & Predictions", cex=cex_lab, ypos=0.3)
-PlotLabel("", cex=cex_lab)
-PlotLabel("   Residuals vs. Time", cex=cex_lab)
-PlotLabel("", cex=cex_lab)
-PlotLabel("Residuals vs. Predictions", cex=cex_lab)
-PlotLabel("Simulated Data", cex=cex_lab)
-PlotLabel("", cex=cex_lab)
-
-## Plot Data
-for(i in 1:3) {
-  i_sel <- sel[i]
-  Plot1Row(x = l_out[[i_sel]]$x,
-           x_hat= l_out[[i_sel]]$xhat,
-           x_res = l_out[[i_sel]]$res,
-           x_ppc = l_out[[i_sel]]$xsim,
-           R2 = FitAR1(l_out[[i_sel]]$x)$R2,
-           RMSE = FitAR1(l_out[[i_sel]]$x)$RMSE,
-           ylim=c(-5, 5),
-           showresAR = TRUE,
-           xlab=c(FALSE, FALSE, TRUE)[i],
-           legend=c(TRUE, FALSE, FALSE)[i],
-           colpred = "orange")
-}
-
+pdf("Figures/Fig_AR1_Misspecified_Main_ggplot.pdf",  width=11, height=8)
+PlotDiagnosticsSim(l_out = l_out, 
+                   sel = c(4,3,5), 
+                   labels = c("Trend", "Switching/Non-Linear", "Changing Innovations"), 
+                   legpos = "topleft", 
+                   ylim_data = c(-4,4), 
+                   ylim_res = c(-4,4), 
+                   v_legend = c(FALSE, TRUE, FALSE))
 dev.off()
-
 
 # -----------------------------------------------
 # ----- Figure: Three Extra Misspecifications ---
 # -----------------------------------------------
 
-sel <- 6:8
-v_names <- c("Seasonality", "State-Dependent Innovations", "Non-Gaussian Innovations")
-
-# --- Plotting ----
-pdf("Figures/Fig_AR1_Misspecified_Extra.pdf",  width=11, height=8)
-
-# Set up plotting area
-lmat <- matrix(5:32, nrow=4, byrow = TRUE)
-lmat <- cbind(1:4, lmat)
-lo <- layout(mat = lmat,
-             heights = c(0.1, 1, 1, 1, 1),
-             widths = c(0.1, 1,0.15,1,0.15, 1,1,0.15))
-# layout.show(lo)
-
-## Plot Labels
-cex_lab <- 1.5
-## Row labels
-PlotLabel("", cex=cex_lab)
-PlotLabel(v_names[1], cex=cex_lab, srt = 90, ypos=0.45)
-PlotLabel(v_names[2], cex=cex_lab, srt = 90, ypos=0.45)
-PlotLabel(v_names[3], cex=cex_lab, srt = 90, ypos=0.45)
-## Column labels
-PlotLabel("Data & Predictions", cex=cex_lab, ypos=0.3)
-PlotLabel("", cex=cex_lab)
-PlotLabel("   Residuals vs. Time", cex=cex_lab)
-PlotLabel("", cex=cex_lab)
-PlotLabel("Residuals vs. Predictions", cex=cex_lab)
-PlotLabel("Simulated Data", cex=cex_lab)
-PlotLabel("", cex=cex_lab)
-
-## Plot Data
-for(i in 1:3) {
-  i_sel <- sel[i]
-  Plot1Row(x = l_out[[i_sel]]$x,
-           x_hat= l_out[[i_sel]]$xhat,
-           x_res = l_out[[i_sel]]$res,
-           x_ppc = l_out[[i_sel]]$xsim,
-           R2 = FitAR1(l_out[[i_sel]]$x)$R2,
-           RMSE = FitAR1(l_out[[i_sel]]$x)$RMSE,
-           ylim=c(-5, 5),
-           showresAR = TRUE,
-           xlab=c(FALSE, FALSE, TRUE)[i],
-           legend=c(TRUE, FALSE, FALSE)[i],
-           colpred = "orange")
-}
-
+pdf("Figures/Fig_AR1_Misspecified_Extra_ggplot.pdf",  width=11, height=8)
+PlotDiagnosticsSim(l_out = l_out, 
+                   sel = 6:8, 
+                   labels = c("Seasonality", "State-Dependent Innovations", "Non-Gaussian Innovations"), 
+                   legpos = "topleft", 
+                   ylim_data = c(-4,4), 
+                   ylim_res = c(-4,4), 
+                   v_legend = c(FALSE, TRUE, FALSE), 
+                   label_size = 4)
 dev.off()
-
 
 
 # -----------------------------------------------
@@ -358,35 +247,22 @@ sim_data <- sim_HMM@response[[1]][[1]]@y[1:200,1]
 
 
 # --- Plotting ----
-pdf("Figures/Fig_HMM_ModelFit.pdf",  width=11, height=3)
 
-# Set up plotting area
-lmat <- matrix(1:14, nrow=2, byrow = TRUE)
-lo <- layout(mat = lmat,
-             heights = c(0.1, 1),
-             widths = c(1,0.15,1,0.15, 1,1,0.15))
+l_out_hmm <- list()
+l_out_hmm[[1]] <- list(x = l_synth[[4]],
+                     xhat = out$Pred,
+                     res = out$Res,
+                     xsim = sim_data)
 
-# Column labels
-PlotLabel("Data & Predictions", cex=cex_lab, ypos=0.3)
-PlotLabel("", cex=cex_lab)
-PlotLabel("   Residuals vs. Time", cex=cex_lab)
-PlotLabel("", cex=cex_lab)
-PlotLabel("Residuals vs. Predictions", cex=cex_lab)
-PlotLabel("Simulated Data", cex=cex_lab)
-PlotLabel("", cex=cex_lab)
-
-Plot1Row(x = out$Emp,
-         x_hat= out$Pred,
-         x_res = out$Res,
-         x_ppc = sim_data,
-         R2 = out$R2,
-         RMSE = out$RMSE,
-         ylim=c(-5, 5),
-         showresAR = TRUE,
-         legend=TRUE,
-         colpred = "orange",
-         layout=FALSE, xlab=TRUE)
-
+pdf("Figures/Fig_HMM_ModelFit_ggplot.pdf",  width=11, height=3)
+PlotDiagnosticsSim(l_out = l_out_hmm, 
+                   sel = 1, 
+                   labels = c(""), 
+                   legpos = "topleft", 
+                   ylim_data = c(-4,4), 
+                   ylim_res = c(-4,4), 
+                   v_legend = c(TRUE), 
+                   label_size = 5)
 dev.off()
 
 

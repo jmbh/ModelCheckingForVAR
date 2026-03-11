@@ -78,8 +78,8 @@ labels <- capitalize_first(colnames(data)[4:7])
 # We load the estimated model
 mlVAR_out <- readRDS("Files/Mod_Paper_mlVAR_Grommisch.RDS")
 
-residuals(mlVAR_out)
-predict(mlVAR_out)
+# residuals(mlVAR_out)
+# predict(mlVAR_out)
 
 # ------------------------------------------
 # -------- Compute Residuals ---------------
@@ -100,7 +100,7 @@ for(i in 1:n_ptp) {
   # Compute Prediction Errors
   v_RMSE <- apply(res_i, 2, function(x) sqrt(mean(na.omit(x)^2)))
   v_R2 <- rep(NA, 4)
-  for(j in 1:4) v_R2[i] <- 1 - var(emp_i[, j], na.rm = TRUE) / var(res_i[, j], na.rm = TRUE)  
+  for(j in 1:4) v_R2[j] <- 1 - var(res_i[, j], na.rm = TRUE) / var(emp_i[, j], na.rm = TRUE)  
   
   # Compute Residual variance (for PPCs below)
   ResVAR <- apply(res_i, 2, function(x) var(x, na.rm=TRUE))
@@ -132,137 +132,34 @@ for(i in 1:n_ptp) l_PPCs[[i]] <- SimPPC(data = data,
 # -------- Diagnostic Plots ----------------
 # ------------------------------------------
 
-
-# -------------------
-# ----- New: ggplot2 ----
-# -------------------
-
-subject <-  3
-pdf(paste0("Figures/Fig_EmpAnalysis_R_Diagnostics_", subject, "_ggplot.pdf"), width=11, height=9.5)
-PlotDiagnostics(l_ResObj = l_ResObj, 
-                l_PPC = l_PPCs,  
-                subject = subject)
-dev.off()
-
-
-# -------------------
-# ----- Selected ----
-# -------------------
-
-# TODO: adapt plots for [100] scale
-# TODO: THen also adapt for below plots with all
-
+# ----- Selected Three for Paper ----
 
 # Here we make separate plots for the three selected persons we show in the paper
 sel <- c(6, 33, 133)
 
-out_sel <- l_ResObj[[133]]
-round(out_sel$R2, 2)
-round(out_sel$RMSE, 2)
-
-for(i in sel) {
-  pdf(paste0("Figures/Fig_EmpAnalysis_R_Diagnostics_", i, "_v2.pdf"), width=11, height=9.5)
+for(i in 1:3) {
+  pdf(paste0("Figures/Fig_EmpAnalysis_R_Diagnostics_", sel[i], ".pdf"), width=11, height=9.5)
   
-  # Set up plotting area
-  lmat <- matrix(6:40, nrow=5, byrow = TRUE)
-  lmat <- cbind(1:5, lmat)
-  lo <- layout(mat = lmat,
-               heights = c(0.1, 1, 1, 1, 1),
-               widths = c(0.1, 1,0.15,1,0.15, 1,1,0.15))
-  # layout.show(lo)
-  
-  # ----- Plot Labels -----
-  cex_lab <- 1.8
-  ## Y-axis
-  PlotLabel("", cex=cex_lab, srt=90)
-  for(j in 1:4) PlotLabel(labels[j], cex=cex_lab, srt=90)
-  ## X-Axis
-  PlotLabel("Data & Predictions", cex=cex_lab)
-  PlotLabel("", cex=cex_lab)
-  PlotLabel("   Residuals vs. Time", cex=cex_lab)
-  PlotLabel("", cex=cex_lab)
-  PlotLabel("Residuals vs. Predictions", cex=cex_lab)
-  PlotLabel("Simulated Data", cex=cex_lab)
-  PlotLabel("", cex=cex_lab)
-  
-  
-  # ----- Plot Data -----
-  for(j in 1:4) {
-    
-    Plot1Row(x = l_ResObj[[i]]$Emp[, j],
-             x_hat= l_ResObj[[i]]$Pred[, j],
-             x_res = l_ResObj[[i]]$Res[, j],
-             x_ppc = l_PPCs[[i]]$data_sim[, j],
-             R2 = round(l_ResObj[[i]]$R2[j], 2),
-             RMSE = round(l_ResObj[[i]]$RMSE[j], 2),
-             legend = c(TRUE, FALSE, FALSE, FALSE)[j],
-             ylim=c(0,100),
-             ylim_res = c(-50, 50),
-             alpha = 0.4,
-             showresAR = TRUE,
-             colpred = "orange",
-             cex_info=1)
-    
-  } # end for: j
+  print(PlotDiagnosticsEmp(l_ResObj = l_ResObj, 
+                           l_PPC = l_PPCs,  
+                           subject = sel[i],
+                           legpos = c("topleft", "topleft", "bottomright")[i])) 
   
   dev.off()
-  
 }
 
 
-# ----------------
-# ----- ALL ------
-# ----------------
+# ----- ALL (for repository) ------
 # This plots the diagnostic plots for *all* persons in the data set
 # We mention these plots in the paper, but of course cannot show them all there
 
 pdf("Figures/Fig_EmpAnalysis_R_Diagnositics_All.pdf", width=11, height=9.5)
 
 for(i in 1:n_ptp) {
-  # for(i in 1:3) {
-  
-  print(i)
-  
-  # Set up plotting area
-  lmat <- matrix(6:40, nrow=5, byrow = TRUE)
-  lmat <- cbind(1:5, lmat)
-  lo <- layout(mat = lmat,
-               heights = c(0.1, 1, 1, 1, 1),
-               widths = c(0.1, 1,0.15,1,0.15, 1,1,0.15))
-  # layout.show(lo)
-  
-  # ----- Plot Labels -----
-  cex_lab <- 1.8
-  ## Y-axis
-  PlotLabel("", cex=cex_lab, srt=90)
-  for(j in 1:4) PlotLabel(labels[j], cex=cex_lab, srt=90)
-  ## X-Axis
-  PlotLabel("Data & Predictions", cex=cex_lab)
-  PlotLabel("", cex=cex_lab)
-  PlotLabel("   Residuals vs. Time", cex=cex_lab)
-  PlotLabel("", cex=cex_lab)
-  PlotLabel("Residuals vs. Predictions", cex=cex_lab)
-  PlotLabel("PPCs", cex=cex_lab)
-  PlotLabel("", cex=cex_lab)
-  
-  
-  # ----- Plot Data -----
-  for(j in 1:4) {
-    
-    Plot1Row(x = l_ResObj[[i]]$Emp[, j],
-             x_hat= l_ResObj[[i]]$Pred[, j],
-             x_res = l_ResObj[[i]]$Res[, j],
-             x_ppc = l_PPCs[[i]]$data_sim[, j],
-             R2 = l_ResObj[[i]]$R2[j],
-             RMSE = l_ResObj[[i]]$RMSE[j],
-             legend = c(TRUE, FALSE, FALSE, FALSE)[j],
-             ylim=c(-5,5),
-             alpha = 0.4,
-             showresAR = TRUE,
-             colpred = "orange")
-    
-  } # end for: j
-  
+  print(PlotDiagnostics(l_ResObj = l_ResObj, 
+                        l_PPC = l_PPCs,  
+                        subject = sel[i]))
+  print(i) # progress
 } # end for: ptp
 
 dev.off()
@@ -351,10 +248,10 @@ for(i in 1:n_ptp) {
 m_R2[m_R2 < -0.5] <- NA
 
 # ----- Get Medians -----
-round(apply(m_RMSE, 2, median, na.rm=TRUE), 2)
-R2_median <- round(apply(m_R2, 2, median, na.rm=TRUE), 2)
-R2_median
-R2_mean <- apply(m_R2, 2, mean, na.rm=TRUE)
+# RMSE
+round(apply(m_RMSE, 2, median, na.rm=TRUE), 0)
+# R2
+round(apply(m_R2, 2, median, na.rm=TRUE), 2)
 
 
 # ----- Violin Plots (appendix) -----
@@ -406,6 +303,7 @@ ggplot(df_scatter, aes(x = R2, y = RMSE)) +
   theme_minimal(base_size = 13) +
   labs(x = "R²", y = "RMSE")
 dev.off()
+
 
 # ------------------------------------------
 # -------- Show Group Level Estimates ------
@@ -529,6 +427,139 @@ for(i in 1:4) for(j in 1:4) {
 } # end for: loop over phi
 
 dev.off()
+
+
+
+
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+
+# # ── Helper: build one histogram + density panel ──────────────────────────────
+# make_panel <- function(vals, xlim = c(-0.65, 0.65), ylim = c(0, 50),
+#                        show_x = FALSE, show_y = FALSE) {
+#   
+#   binwidth <- diff(xlim) / 30          # 40 breaks  →  39 bins
+#   
+#   # Gaussian density scaled to histogram counts
+#   x_seq   <- seq(xlim[1], xlim[2], length.out = 1000)
+#   gauss_y <- dnorm(x_seq, mean(vals, na.rm = TRUE),
+#                    sd(vals,   na.rm = TRUE)) *
+#     length(vals) * binwidth
+#   dens_df <- data.frame(x = x_seq, y = gauss_y)
+#   
+#   p <- ggplot(data.frame(v = vals), aes(x = v)) +
+#     geom_histogram(binwidth  = binwidth,
+#                    boundary  = xlim[1],
+#                    fill      = "grey80",
+#                    colour    = "white",
+#                    linewidth = 0.3) +
+#     geom_line(data = dens_df, aes(x = x, y = y),
+#               colour = "black", linewidth = 0.8) +
+#     geom_vline(xintercept = 0, linetype = "dashed",
+#                colour = "grey50", linewidth = 0.4) +
+#     scale_x_continuous(limits = xlim,
+#                        breaks = c(-0.5, 0, 0.5),
+#                        expand = c(0, 0)) +
+#     scale_y_continuous(limits = ylim,
+#                        breaks = seq(0, 100, 25),
+#                        expand = c(0, 0)) +
+#     panel_grid +                         # shared theme element (see below)
+#     theme(
+#       axis.title    = element_blank(),
+#       axis.text.x   = if (show_x) element_text(size = 7) else element_blank(),
+#       axis.ticks.x  = if (show_x) element_line()         else element_blank(),
+#       axis.text.y   = if (show_y) element_text(size = 7, angle = 0, hjust = 1)
+#       else element_blank(),
+#       axis.ticks.y  = if (show_y) element_line()         else element_blank(),
+#       plot.margin   = margin(2, 4, 2, 2)
+#     )
+#   p
+# }
+# 
+# # ── Shared theme ─────────────────────────────────────────────────────────────
+# panel_grid <- theme_bw() +
+#   theme(panel.grid.major = element_line(colour = "grey90"),
+#         panel.grid.minor = element_blank())
+# 
+# # ── Simulate data (replace with your real a_phi array) ───────────────────────
+# set.seed(42)
+# n_ptp     <- 100
+# var_labels <- c("V1", "V2", "V3", "V4")   # replace with your labels
+# a_phi      <- array(rnorm(4 * 4 * n_ptp, 0, 0.25), dim = c(4, 4, n_ptp))
+# 
+# # ── Build 4×4 grid of panels ─────────────────────────────────────────────────
+# panels <- vector("list", 16)
+# 
+# for (i in 1:4) {
+#   for (j in 1:4) {
+#     vals <- a_phi[i, j, ]
+#     panels[[(i - 1) * 4 + j]] <- make_panel(
+#       vals,
+#       show_x = (i == 4),   # x-axis only on bottom row
+#       show_y = (j == 1)    # y-axis only on left column
+#     )
+#   }
+# }
+# 
+# # ── Column-header labels  (predictor at t-1) ─────────────────────────────────
+# col_labels <- lapply(var_labels, function(lbl) {
+#   ggplot() +
+#     annotate("text", x = 0.5, y = 0.5,
+#              label    = paste0(lbl, " (t\u22121)"),
+#              size     = 3.8, fontface = "bold") +
+#     theme_void() +
+#     theme(plot.margin = margin(0, 0, 0, 0))
+# })
+# 
+# # ── Row-header labels  (outcome at t) ────────────────────────────────────────
+# row_labels <- lapply(var_labels, function(lbl) {
+#   ggplot() +
+#     annotate("text", x = 0.5, y = 0.5,
+#              label    = paste0(lbl, " (t)"),
+#              angle    = 90,
+#              size     = 3.8, fontface = "bold") +
+#     theme_void() +
+#     theme(plot.margin = margin(0, 0, 0, 0))
+# })
+# 
+# # ── Assemble with patchwork ───────────────────────────────────────────────────
+# # Top row: blank corner + 4 column labels
+# top_row <- (plot_spacer() | wrap_plots(col_labels, nrow = 1)) +
+#   plot_layout(widths = c(0.12, 1))
+# 
+# # Content rows: row label + 4 panels
+# make_row <- function(i) {
+#   row_panels <- panels[((i - 1) * 4 + 1):(i * 4)]
+#   (row_labels[[i]] | wrap_plots(row_panels, nrow = 1)) +
+#     plot_layout(widths = c(0.12, 1))
+# }
+# 
+# content_rows <- lapply(1:4, make_row)
+# 
+# # Stack everything
+# final_plot <- (top_row / content_rows[[1]] / content_rows[[2]] /
+#                  content_rows[[3]] / content_rows[[4]]) +
+#   plot_layout(heights = c(0.08, 1, 1, 1, 1))
+# 
+# # ── Save ─────────────────────────────────────────────────────────────────────
+# sc <- 0.95
+# ggsave("Figures/Fig_mlVAR_RE_Distr_phi.pdf",
+#        plot   = final_plot,
+#        width  = 12 * sc,
+#        height = 11 * sc)
+# 
+
+
+
+
+
+
+
+
+
+
+
 
 
 # ----- Intercepts ----

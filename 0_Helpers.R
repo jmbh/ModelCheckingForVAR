@@ -20,143 +20,316 @@ library(scales)
 
 
 # ------------------------------------------
-# -------- Diagnostic Plots (ggplot new) ---
+# -------- Plot 1 Row of Diagnostics -------
 # ------------------------------------------
 
-PlotDiagnostics <- function(l_ResObj, 
-                            l_PPCs, 
-                            subject) {
+Plot1Row <- function(emp, 
+                     pred, 
+                     res, 
+                     sim,
+                     legpos = "topleft", 
+                     ylim_data = ylim_data, 
+                     ylim_res = ylim_res, 
+                     legend = TRUE, 
+                     label_size = 5) {
   
   
+  # Settings
+  linewidth = 0.35
+  hist_col <- "grey50"
+  
+  if(legpos == "topleft") legend.position <- c(0.3, 0.9)
+  if(legpos == "bottomright") legend.position <- c(0.75, 0.3)
+  
+  # Compute R2
+  R2 <- 1 - var(res, na.rm = TRUE) / var(emp, na.rm = TRUE)
+  
+  # Make df with all we need
+  N_data <- length(emp)
+  df_i <- data.frame(time = 1:N_data,
+                     emp = emp, 
+                     pred = pred, 
+                     res = res, 
+                     sim = sim)
+  
+  # ---- Panel A: Data & Prediction
+  # Plot 1: Line plot data + predictions
+  p_line <- ggplot(df_i, aes(time, emp)) +
+    geom_line(aes(y = emp, color = "Empirical"), linewidth = linewidth) +
+    geom_line(aes(y = pred, color = "Predictions"), linewidth = linewidth) +
+    annotate(
+      "text",
+      x = 180,
+      y = 100,
+      label = paste0("R^2==", round(R2, 2)),
+      parse=TRUE,
+      size = 2
+    ) +
+    theme_minimal() + 
+    coord_cartesian(ylim = ylim_data) + 
+    scale_color_manual(
+      values = c(
+        "Empirical" = "black",
+        "Predictions" = "darkorange2"
+      )
+    ) +
+    theme(
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      legend.position = if (legend) legend.position else "none",
+      legend.spacing.y = unit(0.04, "cm"),
+      legend.key.height = unit(0.4, "cm"),
+      legend.title = element_blank()
+    )
+  
+  # histogram of y
+  mu <- mean(df_i$emp, na.rm = TRUE)
+  sd <- sd(df_i$emp, na.rm = TRUE)
+  p_hist <- ggplot(df_i, aes(emp)) +
+    geom_histogram(aes(y = after_stat(density)), bins = 20, fill = hist_col) +
+    coord_flip(xlim = ylim_data) +
+    theme_minimal() +
+    stat_function(
+      fun = dnorm,
+      args = list(mean = mu, sd = sd),
+      linewidth = 1
+    ) +
+    theme(
+      axis.title.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.title.x = element_blank(),
+      panel.grid = element_blank()
+    )
+  
+  
+  # ---- Panel B: Residuals over time
+  # Fit linear trend
+  lm_trnd <- lm(res[-1]~res[-nrow(df_i)], data=df_i)
+  Pnt <- round(lm_trnd$coefficients[2], 2)
+  CIs <- round(confint(lm_trnd, level = 0.95)[2, ], 2)
+  # Line plot
+  p_line_res <- ggplot(df_i, aes(time, res)) +
+    geom_line(linewidth = linewidth) +
+    theme_minimal() +
+    coord_cartesian(ylim = ylim_res) + theme(
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank()
+    ) + 
+    annotate(
+      "text",
+      x = 110,
+      y = -55,
+      label = paste0("AR(1): ", Pnt, ", 95%CI: [", CIs[1], ", ", CIs[2], "]"),
+      size = 2
+    )
+  mu <- mean(df_i$res, na.rm = TRUE)
+  sd <- sd(df_i$res, na.rm = TRUE)
+  p_hist_res <- ggplot(df_i, aes(res)) +
+    geom_histogram(aes(y = after_stat(density)), bins = 20, fill = hist_col) +
+    coord_flip(xlim = ylim_res) +
+    theme_minimal() +
+    stat_function(
+      fun = dnorm,
+      args = list(mean = mu, sd = sd),
+      linewidth = 1
+    ) +
+    theme(
+      axis.title.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.title.x = element_blank(),
+      panel.grid = element_blank()
+    )
+  
+  # ---- Panel C: Scatter Plot:
+  p_scatter <- ggplot(df_i, aes(x = res, y = pred)) +
+    geom_point(alpha = 0.4) + 
+    theme_minimal() +
+    coord_cartesian(ylim = ylim_data, 
+                    xlim = ylim_res) + 
+    theme(
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank()
+    )
+  # ---- Panel D: Data Simulated from Estimated Model
+  p_line_sim <- ggplot(df_i, aes(time, sim)) +
+    geom_line(linewidth = linewidth) +
+    theme_minimal() +
+    coord_cartesian(ylim = ylim_data) + theme(
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank()
+    )
+  mu <- mean(df_i$sim, na.rm = TRUE)
+  sd <- sd(df_i$sim, na.rm = TRUE)
+  p_hist_sim <- ggplot(df_i, aes(sim)) +
+    geom_histogram(aes(y = after_stat(density)), bins = 20, fill = hist_col) +
+    coord_flip(xlim = ylim_data) +
+    theme_minimal() +
+    stat_function(
+      fun = dnorm,
+      args = list(mean = mu, sd = sd),
+      linewidth = 1
+    ) +
+    theme(
+      axis.title.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.title.x = element_blank(),
+      panel.grid = element_blank()
+    )
+  
+  outlist <- list(p_line,
+                  p_hist,
+                  p_line_res,
+                  p_hist_res,
+                  p_scatter,
+                  p_line_sim,
+                  p_hist_sim)
+  
+  return(outlist)
+  
+} # EoF
+
+
+# ------------------------------------------
+# -------- Diagnostic Plots (Simulated) ----
+# ------------------------------------------
+
+
+PlotDiagnosticsSim <- function(l_out, # object with data 
+                               sel,  # selection of cases
+                               legpos = "topleft", 
+                               labels, 
+                               v_legend,
+                               ylim_data = c(-4,4), 
+                               ylim_res = c(-4,4), 
+                               label_size = 5) {
+  
+  n_row <- length(sel)
+  
+  # Storing plots
   l_row_plots <- list()
+  for(j in 1:n_row) l_row_plots[[j]] <- Plot1Row(emp = l_out[[sel[j]]]$x,
+                                                 pred = l_out[[sel[j]]]$xhat,
+                                                 res = l_out[[sel[j]]]$res,
+                                                 sim = l_out[[sel[j]]]$xsim,
+                                                 legpos = legpos, 
+                                                 ylim_data = ylim_data, 
+                                                 ylim_res = ylim_res, 
+                                                 legend = v_legend[j])
   
-  for(j in 1:4) {
+  # Create labels
+  label_plot <- function(label, angle = 0, size = label_size) {
+    ggplot() +
+      annotate("text", x = 0.5, y = 0.5, label = label, angle = angle, size = size) +
+      theme_void() +
+      coord_cartesian(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE)
+  }
+  col1 <- label_plot("   Empirical & Predicted")
+  col2 <- label_plot("   Residuals")
+  col3 <- label_plot("Residual vs. Predicted")
+  col4 <- label_plot("   Simulated")
   
-    # Make df with all we need
-    N_data <- length(l_ResObj[[subject]]$Emp[, j])
-    df_i <- data.frame(time = 1:N_data,
-                       emp = l_ResObj[[subject]]$Emp[, j], 
-                       pred = l_ResObj[[subject]]$Pred[, j], 
-                       res = l_ResObj[[subject]]$Res[, j], 
-                       sim = l_PPCs[[subject]]$data_sim[, j])
+  l_rowplots <- list()
+  for(j in 1:n_row) l_rowplots[[j]] <- label_plot(labels[j], angle = 90)
+  
+  # Split two cases: 1 vs 2 vs 3 rows
+  # --- 1 Row (for HMM) ---
+  if(n_row == 1) {
     
+    # Break up into lists for nicer looking code below:
+    r1 <- l_row_plots[[1]]
+    # Assemble all
+    widths <- c(0.6, 4, 1, 4, 1, 4, 4, 1)
+    heights <- c(0.6, 4)
+    top_row <- plot_spacer() + 
+      col1 + plot_spacer() + col2 + plot_spacer() + col3 + col4 + plot_spacer() +
+      plot_layout(widths = widths)
+    row1 <- ( l_rowplots[[1]] + r1[[1]] + r1[[2]] + r1[[3]] + r1[[4]] + r1[[5]] + r1[[6]] + r1[[7]]) +
+      plot_layout(widths = widths)
     
-    # ---- Panel A: Data & Prediction
-    # Plot 1: Line plot data + predictions
-    p_line <- ggplot(df_i, aes(time, emp)) +
-      geom_line() +
-      theme_minimal() + 
-      geom_line(aes(y = pred), color = "orange") +
-      coord_cartesian(ylim = c(0, 100)) + 
-      theme(
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()
-      )
-    
-    # histogram of y
-    mu <- mean(df_i$emp, na.rm = TRUE)
-    sd <- sd(df_i$emp, na.rm = TRUE)
-    p_hist <- ggplot(df_i, aes(emp)) +
-      geom_histogram(aes(y = after_stat(density)), bins = 20) +
-      coord_flip(xlim = c(0, 100)) +
-      theme_minimal() +
-      stat_function(
-        fun = dnorm,
-        args = list(mean = mu, sd = sd),
-        linewidth = 1
-      ) +
-      theme(
-        axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.title.x = element_blank(),
-        panel.grid = element_blank()
-      )
-    # ---- Panel B: Residuals over time
-    p_line_res <- ggplot(df_i, aes(time, res)) +
-      geom_line() +
-      theme_minimal() +
-      coord_cartesian(ylim = c(-60, 60)) + theme(
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()
-      )
-    mu <- mean(df_i$res, na.rm = TRUE)
-    sd <- sd(df_i$res, na.rm = TRUE)
-    p_hist_res <- ggplot(df_i, aes(res)) +
-      geom_histogram(aes(y = after_stat(density)), bins = 20) +
-      coord_flip(xlim = c(-60, 60)) +
-      theme_minimal() +
-      stat_function(
-        fun = dnorm,
-        args = list(mean = mu, sd = sd),
-        linewidth = 1
-      ) +
-      theme(
-        axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.title.x = element_blank(),
-        panel.grid = element_blank()
-      )
-    
-    # p_line_res + p_hist_res
-    # ---- Panel C: Scatter Plot:
-    p_scatter <- ggplot(df_i, aes(x = res, y = pred)) +
-      geom_point(alpha = 0.4) + 
-      theme_minimal() +
-      coord_cartesian(ylim = c(0, 100), 
-                      xlim = c(-60, 60)) + 
-      theme(
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()
-      )
-    # ---- Panel D: Data Simulated from Estimated Model
-    p_line_sim <- ggplot(df_i, aes(time, sim)) +
-      geom_line() +
-      theme_minimal() +
-      coord_cartesian(ylim = c(0, 100)) + theme(
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()
-      )
-    mu <- mean(df_i$sim, na.rm = TRUE)
-    sd <- sd(df_i$sim, na.rm = TRUE)
-    p_hist_sim <- ggplot(df_i, aes(sim)) +
-      geom_histogram(aes(y = after_stat(density)), bins = 20) +
-      coord_flip(xlim = c(0, 100)) +
-      theme_minimal() +
-      stat_function(
-        fun = dnorm,
-        args = list(mean = mu, sd = sd),
-        linewidth = 1
-      ) +
-      theme(
-        axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.title.x = element_blank(),
-        panel.grid = element_blank()
-      )
-    
-    p_line_sim + p_hist_sim
-    
-    l_row_plots[[j]] <- list(p_line,
-                             p_hist,
-                             p_line_res,
-                             p_hist_res,
-                             p_scatter,
-                             p_line_sim,
-                             p_hist_sim)
-    
-  } # end for: plot rows
+    print(top_row / row1 + plot_layout(heights = heights))
+  } # end: if
   
   
-  # Createlabels
+  # --- 2 Rows ---
+  if(n_row == 2) {
+    
+    # Break up into lists for nicer looking code below:
+    r1 <- l_row_plots[[1]]
+    r2 <- l_row_plots[[2]]
+    # Assemble all
+    widths <- c(0.6, 4, 1, 4, 1, 4, 4, 1)
+    heights <- c(0.6, 4, 4)
+    top_row <- plot_spacer() + 
+      col1 + plot_spacer() + col2 + plot_spacer() + col3 + col4 + plot_spacer() +
+      plot_layout(widths = widths)
+    row1 <- ( l_rowplots[[1]] + r1[[1]] + r1[[2]] + r1[[3]] + r1[[4]] + r1[[5]] + r1[[6]] + r1[[7]]) +
+      plot_layout(widths = widths)
+    row2 <- (l_rowplots[[2]] + r2[[1]] + r2[[2]] + r2[[3]] + r2[[4]] + r2[[5]] + r2[[6]] + r2[[7]]) +
+      plot_layout(widths = widths)
+    
+   print(top_row / row1 / row2 + plot_layout(heights = heights))
+  } # end: if
+  
+  # --- 3 Rows ---
+  if(n_row == 3) {
+    
+    # Break up into lists for nicer looking code below:
+    r1 <- l_row_plots[[1]]
+    r2 <- l_row_plots[[2]]
+    r3 <- l_row_plots[[3]]
+    # Assemble all
+    widths <- c(0.6, 4, 1, 4, 1, 4, 4, 1)
+    heights <- c(0.6, 4, 4, 4)
+    top_row <- plot_spacer() + 
+      col1 + plot_spacer() + col2 + plot_spacer() + col3 + col4 + plot_spacer() +
+      plot_layout(widths = widths)
+    row1 <- (l_rowplots[[1]] + r1[[1]] + r1[[2]] + r1[[3]] + r1[[4]] + r1[[5]] + r1[[6]] + r1[[7]]) +
+      plot_layout(widths = widths)
+    row2 <- (l_rowplots[[2]] + r2[[1]] + r2[[2]] + r2[[3]] + r2[[4]] + r2[[5]] + r2[[6]] + r2[[7]]) +
+      plot_layout(widths = widths)
+    row3 <- (l_rowplots[[3]] + r3[[1]] + r3[[2]] + r3[[3]] + r3[[4]] + r3[[5]] + r3[[6]] + r3[[7]]) +
+      plot_layout(widths = widths)
+    
+    print(top_row / row1 / row2 / row3 + plot_layout(heights = heights))
+    
+  } # end: if
+  
+} # End of ggplot function
+
+
+# ------------------------------------------
+# -------- Diagnostic Plots (Empirical) ----
+# ------------------------------------------
+
+PlotDiagnosticsEmp <- function(l_ResObj, 
+                               l_PPCs, 
+                               subject, 
+                               v_legend,
+                               legpos = "topleft", 
+                               ylim_data = c(0,100), 
+                               ylim_res = c(-60, 60), 
+                               label_size = 5) {
+  
+  
+  # Storing plots
+  l_row_plots <- list()
+  for(j in 1:4) l_row_plots[[j]] <- Plot1Row(emp = l_ResObj[[subject]]$Emp[, j],
+                                             pred = l_ResObj[[subject]]$Pred[, j],
+                                             res = l_ResObj[[subject]]$Res[, j],
+                                             sim = l_PPCs[[subject]]$data_sim[, j],
+                                             legpos = legpos,
+                                             legend = v_legend[j])
+  
+  # Create labels
   label_plot <- function(label, angle = 0, size = 5) {
     ggplot() +
       annotate("text", x = 0.5, y = 0.5, label = label, angle = angle, size = size) +
@@ -198,6 +371,8 @@ PlotDiagnostics <- function(l_ResObj,
   top_row / row1 / row2 / row3 / row4 + plot_layout(heights = heights)
   
 } # End of ggplot function
+
+
 
 # ------------------------------------------
 # -------- Fit AR(1), Predict, Residuals ---
@@ -279,125 +454,125 @@ ResAnalysisHMM <- function(fit, x) {
 # -------- 1 Row of Multi Panel Figure -----
 # ------------------------------------------
 
-Plot1Row <- function(x,
-                     x_hat,
-                     x_res,
-                     x_ppc,
-                     R2 = NULL,
-                     RMSE = NULL,
-                     showresAR=FALSE,
-                     ylim=c(0, 100),
-                     ylim_res = c(-50, 50),
-                     legend=FALSE,
-                     alpha = 0.6,
-                     colpred = "blue",
-                     cex_info=1,
-                     layout=FALSE,
-                     xlab=FALSE) {
-  
-  # Mar Time series plots
-  mar_ts <- c(3,3,0,1)
-  
-  # Layout
-  if(layout) lo <- layout(matrix(1:7, nrow=1), widths = c(1,0.15,1,0.15, 1,1,0.15))
-  
-  l_cols <- list()
-  l_cols$emp <- "black"
-  l_cols$pred <- "orange"
-  l_cols$res <- "black"
-  l_cols$ppc <- "black"
-  
-  par(mar=mar_ts)
-  # 1) Time Series + Predictions
-  plot.new()
-  plot.window(xlim=c(1, 200), ylim=ylim)
-  grid()
-  axis(1)
-  axis(2, las=2)
-  if(xlab) title(xlab="Time", line=2)
-  lines(x, col= l_cols$emp)
-  lines(x_hat, col=l_cols$pred)
-  # Plot R2 and RMSE
-  if(!is.null(R2)) text(140, ylim[1]+0.77, paste0("R2 = ", round(R2, 3)), adj=0, cex=cex_info)
-  if(!is.null(RMSE)) text(140, ylim[1]+0.12, paste0("RMSE = ", round(RMSE, 3)), adj=0, cex=cex_info)
-  if(legend) legend("bottomleft", legend=c("Data", "Predictions"), text.col=c(l_cols$emp, l_cols$pred),
-                    bty = "n")
-  
-  h_hist <- 0.0
-  par(mar=c(3,0,2,h_hist))
-  PlotMarg(x, ylim=ylim)
-  
-  # 2) Residuals x Time
-  par(mar=mar_ts)
-  plot.new()
-  plot.window(xlim=c(1, 200), ylim=ylim_res)
-  grid()
-  axis(1)
-  axis(2, las=2)
-  if(xlab) title(xlab="Time", line=2)
-  lines(x_res, col=l_cols$res)
-  # Plot residual autocorrelation
-  if(showresAR) {
-    lm_ar <- lm(x_res[-1] ~ x_res[-length(x_res)])
-    lm_ar_sum <- summary(lm_ar)
-    text(10, ylim[1]+0.4, paste0("AR(1) = ", round(lm_ar_sum$coefficients[2, 1], 2), ", p = ", round(lm_ar_sum$coefficients[2, 4], 2)), adj=0, cex=cex_info)
-  }
-  
-  # 2.5) Residual Marginal
-  par(mar=c(3,0,2,h_hist))
-  PlotMarg(x_res, ylim=ylim)
-  
-  # 3) Residuals x Predictions
-  par(mar=mar_ts)
-  plot.new()
-  plot.window(xlim=ylim, ylim=ylim)
-  grid()
-  axis(1)
-  axis(2, las=2)
-  if(xlab) title(xlab="Predictions", line=2)
-  points(x_hat, x_res, col=alpha("black", alpha=alpha), pch=19)
-  
-  # 4) PCCs
-  par(mar=mar_ts)
-  plot.new()
-  plot.window(xlim=c(1, 200), ylim=ylim)
-  grid()
-  axis(1)
-  axis(2, las=2)
-  if(xlab) title(xlab="Time", line=2)
-  lines(x_ppc, col="black")
-  par(mar=c(3,0,2,h_hist))
-  PlotMarg(x_ppc, ylim=ylim)
-  
-} # eOF
-
+# Plot1Row <- function(x,
+#                      x_hat,
+#                      x_res,
+#                      x_ppc,
+#                      R2 = NULL,
+#                      RMSE = NULL,
+#                      showresAR=FALSE,
+#                      ylim=c(0, 100),
+#                      ylim_res = c(-50, 50),
+#                      legend=FALSE,
+#                      alpha = 0.6,
+#                      colpred = "blue",
+#                      cex_info=1,
+#                      layout=FALSE,
+#                      xlab=FALSE) {
+#   
+#   # Mar Time series plots
+#   mar_ts <- c(3,3,0,1)
+#   
+#   # Layout
+#   if(layout) lo <- layout(matrix(1:7, nrow=1), widths = c(1,0.15,1,0.15, 1,1,0.15))
+#   
+#   l_cols <- list()
+#   l_cols$emp <- "black"
+#   l_cols$pred <- "orange"
+#   l_cols$res <- "black"
+#   l_cols$ppc <- "black"
+#   
+#   par(mar=mar_ts)
+#   # 1) Time Series + Predictions
+#   plot.new()
+#   plot.window(xlim=c(1, 200), ylim=ylim)
+#   grid()
+#   axis(1)
+#   axis(2, las=2)
+#   if(xlab) title(xlab="Time", line=2)
+#   lines(x, col= l_cols$emp)
+#   lines(x_hat, col=l_cols$pred)
+#   # Plot R2 and RMSE
+#   if(!is.null(R2)) text(140, ylim[1]+0.77, paste0("R2 = ", round(R2, 3)), adj=0, cex=cex_info)
+#   if(!is.null(RMSE)) text(140, ylim[1]+0.12, paste0("RMSE = ", round(RMSE, 3)), adj=0, cex=cex_info)
+#   if(legend) legend("bottomleft", legend=c("Data", "Predictions"), text.col=c(l_cols$emp, l_cols$pred),
+#                     bty = "n")
+#   
+#   h_hist <- 0.0
+#   par(mar=c(3,0,2,h_hist))
+#   PlotMarg(x, ylim=ylim)
+#   
+#   # 2) Residuals x Time
+#   par(mar=mar_ts)
+#   plot.new()
+#   plot.window(xlim=c(1, 200), ylim=ylim_res)
+#   grid()
+#   axis(1)
+#   axis(2, las=2)
+#   if(xlab) title(xlab="Time", line=2)
+#   lines(x_res, col=l_cols$res)
+#   # Plot residual autocorrelation
+#   if(showresAR) {
+#     lm_ar <- lm(x_res[-1] ~ x_res[-length(x_res)])
+#     lm_ar_sum <- summary(lm_ar)
+#     text(10, ylim[1]+0.4, paste0("AR(1) = ", round(lm_ar_sum$coefficients[2, 1], 2), ", p = ", round(lm_ar_sum$coefficients[2, 4], 2)), adj=0, cex=cex_info)
+#   }
+#   
+#   # 2.5) Residual Marginal
+#   par(mar=c(3,0,2,h_hist))
+#   PlotMarg(x_res, ylim=ylim)
+#   
+#   # 3) Residuals x Predictions
+#   par(mar=mar_ts)
+#   plot.new()
+#   plot.window(xlim=ylim, ylim=ylim)
+#   grid()
+#   axis(1)
+#   axis(2, las=2)
+#   if(xlab) title(xlab="Predictions", line=2)
+#   points(x_hat, x_res, col=alpha("black", alpha=alpha), pch=19)
+#   
+#   # 4) PCCs
+#   par(mar=mar_ts)
+#   plot.new()
+#   plot.window(xlim=c(1, 200), ylim=ylim)
+#   grid()
+#   axis(1)
+#   axis(2, las=2)
+#   if(xlab) title(xlab="Time", line=2)
+#   lines(x_ppc, col="black")
+#   par(mar=c(3,0,2,h_hist))
+#   PlotMarg(x_ppc, ylim=ylim)
+#   
+# } # eOF
+# 
 
 # ------------------------------------------
 # -------- Plot Marginals ------------------
 # ------------------------------------------
 # This is used in the plotting function above 
 
-PlotMarg <- function(x, ylim) {
-  
-  # Don't show data outside plotting area
-  x[x < ylim[1]] <- NA
-  x[x > ylim[2]] <- NA
-  
-  hist_data <- hist(x, plot = FALSE, breaks=seq(ylim[1], ylim[2], length=30))
-  bar_centers <- barplot(hist_data$counts,
-                         horiz = TRUE,  # Horizontal bars
-                         names.arg = NULL,
-                         axes=FALSE, 
-                         xlim = c(0, max(hist_data$counts)*1.1)) # To make sure that density fits on plot
-  x_seq <- seq(ylim[1], ylim[2], length=1000)
-  gauss_den <- dnorm(x_seq,
-                     mean = mean(x, na.rm = TRUE),
-                     sd = sd(x, na.rm = TRUE))
-  bin_width <- diff(hist_data$breaks)[1]
-  dens_counts <- gauss_den * length(x) * bin_width
-  lines(dens_counts, seq(bar_centers[1], bar_centers[length(bar_centers)], length=1000), type = "l", lwd = 2, col = "black")
-  
-} # eoF
+# PlotMarg <- function(x, ylim) {
+#   
+#   # Don't show data outside plotting area
+#   x[x < ylim[1]] <- NA
+#   x[x > ylim[2]] <- NA
+#   
+#   hist_data <- hist(x, plot = FALSE, breaks=seq(ylim[1], ylim[2], length=30))
+#   bar_centers <- barplot(hist_data$counts,
+#                          horiz = TRUE,  # Horizontal bars
+#                          names.arg = NULL,
+#                          axes=FALSE, 
+#                          xlim = c(0, max(hist_data$counts)*1.1)) # To make sure that density fits on plot
+#   x_seq <- seq(ylim[1], ylim[2], length=1000)
+#   gauss_den <- dnorm(x_seq,
+#                      mean = mean(x, na.rm = TRUE),
+#                      sd = sd(x, na.rm = TRUE))
+#   bin_width <- diff(hist_data$breaks)[1]
+#   dens_counts <- gauss_den * length(x) * bin_width
+#   lines(dens_counts, seq(bar_centers[1], bar_centers[length(bar_centers)], length=1000), type = "l", lwd = 2, col = "black")
+#   
+# } # eoF
 
 
 # ------------------------------------------
@@ -407,13 +582,13 @@ PlotMarg <- function(x, ylim) {
 
 PlotLabel <- function(text, srt=0, cex=1.5,
                       xpos=0.5, ypos=0.5) {
-  
+
   par(mar=rep(0, 4))
-  
+
   plot.new()
   plot.window(xlim=c(0, 1), ylim=c(0,1))
   text(x=xpos, y=ypos, labels=text, srt=srt, cex=cex, adj=0.4)
-  
+
 }
 
 
@@ -552,7 +727,7 @@ SimPPC <- function(data,
     # Get the intercepts
     # mu_1 <- model$results$mu$subject[[subject]]
     # intc <- mu_1 # Those are intercepts
-
+    
     # --- Rescale regression coefficients back to [0, 100]-scale ---
     # TO FIX: The below is roughly correct, but not exactly, because:
     # - mlVAR might rescale slightly differently
