@@ -128,6 +128,28 @@ for(i in 1:n_ptp) l_PPCs[[i]] <- SimPPC(data = data,
                                         Nt = nrow(l_ResObj[[i]]$Emp)) # simulate length of original time series
 
 
+
+# Compare with Sacha's implementation
+# Data
+data_i <- data[data$id == u_ptp[1], 4:7]
+apply(data_i, 2, mean, na.rm=TRUE)
+apply(data_i, 2, sd, na.rm=TRUE)
+# My Sim
+apply(l_PPCs[[i]]$data_sim, 2, mean) # Fits only negative emotions
+apply(l_PPCs[[i]]$data_sim, 2, sd) # Fits the empirical data
+# Sacha
+# Testing new function
+sim_out <- resimulate(mlVAR_out)
+sim_out_i <- sim_out[sim_out$id == u_ptp[1], ]
+apply(sim_out_i[, 4:7], 2, mean, na.rm=T) # Fits only the positive emotions
+apply(sim_out_i[, 4:7], 2, sd, na.rm=T) # Does not fit the empirical data for any variable
+
+# Additional notes:
+# 1) I like the default of simulating the same length, but maybe you can provide an argument for longer time series
+# 2) I also like the default of putting the missingness back in, but also here I think it would be nice to have an argument that allows one to get the full time series
+
+
+
 # ------------------------------------------
 # -------- Diagnostic Plots ----------------
 # ------------------------------------------
