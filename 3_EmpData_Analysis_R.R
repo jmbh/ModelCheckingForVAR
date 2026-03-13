@@ -371,252 +371,136 @@ round(mlVAR_out$results$mu$SD, 3)
 
 
 # ------------------------------------------
-# -------- Look at Random Effects Distr ----
+# -------- RE Distributions - ggplot ----
 # ------------------------------------------
 
+
 # ----- Lagged Effects ----
-# Get this into an array
+# Prepare data frame
 a_phi <- array(NA, dim=c(4, 4, n_ptp))
 for(i in 1:n_ptp) a_phi[, , i] <- mlVAR_out$results$Beta$subject[[i]][, , 1]
-
-sc <- 0.95
-pdf("Figures/Fig_mlVAR_RE_Distr_phi.pdf", width=12*sc, height=11*sc)
-
-# Layout
-lmat <- matrix(8+(1:4^2), nrow=4)
-lmat <- cbind(5:8, lmat)
-lmat <- rbind(0:4, lmat)
-lo <- layout(mat = lmat,
-             heights = c(0.1, 1, 1, 1, 1),
-             widths = c(0.1, 1, 1, 1, 1))
-# layout.show(lo)
-
-
-# Labels
-for(i in 1:4) PlotLabel(paste0(var_labels[i], " (t-1)"))
-for(i in 1:4) PlotLabel(paste0(var_labels[i], " (t)"), srt=90)
-# Data
-
-par(mar=c(4,3,1,1))
+df <- data.frame(matrix(NA, nrow=n_ptp, ncol=4^2))
+cnt <- 1
 for(i in 1:4) for(j in 1:4) {
-  
-  # Histogram
-  xlim <- c(-0.65, .65)
-  ylim=c(0,100)
-  hist_data <- hist(a_phi[i, j, ], 
-                    breaks=seq(xlim[1], xlim[2], length=40), 
-                    xlim=c(xlim[1], xlim[2]), 
-                    main="", xlab="", axes=F, ylim=c(0,100))
-  grid()
-  hist(a_phi[i, j, ], 
-       breaks=seq(xlim[1], xlim[2], length=40), 
-       xlim=c(xlim[1], xlim[2]), 
-       main="", xlab="", axes=F, add=TRUE, ylim=c(0,100))
-  axis(1)
-  axis(2, las=2)
-  
-  # Density plot
-  x_seq <- seq(xlim[1], xlim[2], length=1000)
-  gauss_den <- dnorm(x_seq,
-                     mean = mean(a_phi[i, j, ], na.rm = TRUE),
-                     sd = sd(a_phi[i, j, ], na.rm = TRUE))
-  
-  lines(x_seq, gauss_den * length(a_phi[i, j, ]) * diff(hist_data$breaks)[1], 
-        col = "black", lwd = 2)
-  
-} # end for: loop over phi
+  df[, cnt] <- a_phi[i, j, ]
+  colnames(df)[cnt] <- paste0("phi_", i, "_", j)
+  cnt <- cnt + 1
+}
 
+# Plotting individual histograms
+l_REplots <- list()
+cnt <- 1
+for(i in 1:4) for(j in 1:4) local({
+  cnt_local <- cnt
+  i_local   <- i
+  j_local   <- j
+  xvar      <- colnames(df)[cnt_local]
+  xlim      <- c(-0.2, 0.6)
+  bins      <- 60
+  
+  x <- as.numeric(df[[xvar]])
+  x <- x[is.finite(x)]
+  
+  mu <- mean(x)
+  s  <- sd(x)
+  bw <- diff(xlim) / bins
+  n  <- length(x)
+  
+  l_REplots[[cnt_local]] <<- ggplot(df, aes(x = .data[[xvar]])) +
+    geom_histogram(
+      bins = bins,
+      fill = "steelblue",
+      color = "white",
+      linewidth = 0.3
+    ) +
+    stat_function(
+      fun = function(z) dnorm(z, mean = mu, sd = s) * n * bw,
+      color = "black",
+      linewidth = 1
+    ) +
+    labs(
+      x = "",
+      y = "",
+      title = bquote(phi[.(i_local)*","*.(j_local)])
+    ) +
+    scale_x_continuous(limits = xlim) +
+    scale_y_continuous(limits = c(0, 80)) +
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.x = element_blank(),
+      plot.margin = margin(2, 2, 2, 2)
+    )
+  
+  cnt <<- cnt + 1
+})
+
+# Arrange in Layout
+sc <- 0.95
+pdf("Figures/Fig_mlVAR_RE_Distr_phi_ggplot.pdf", width=12*sc, height=11*sc)
+wrap_plots(l_REplots, ncol = 4, nrow = 4, byrow = TRUE)
 dev.off()
-
-
-
-
-library(ggplot2)
-library(patchwork)
-library(dplyr)
-
-# # ── Helper: build one histogram + density panel ──────────────────────────────
-# make_panel <- function(vals, xlim = c(-0.65, 0.65), ylim = c(0, 50),
-#                        show_x = FALSE, show_y = FALSE) {
-#   
-#   binwidth <- diff(xlim) / 30          # 40 breaks  →  39 bins
-#   
-#   # Gaussian density scaled to histogram counts
-#   x_seq   <- seq(xlim[1], xlim[2], length.out = 1000)
-#   gauss_y <- dnorm(x_seq, mean(vals, na.rm = TRUE),
-#                    sd(vals,   na.rm = TRUE)) *
-#     length(vals) * binwidth
-#   dens_df <- data.frame(x = x_seq, y = gauss_y)
-#   
-#   p <- ggplot(data.frame(v = vals), aes(x = v)) +
-#     geom_histogram(binwidth  = binwidth,
-#                    boundary  = xlim[1],
-#                    fill      = "grey80",
-#                    colour    = "white",
-#                    linewidth = 0.3) +
-#     geom_line(data = dens_df, aes(x = x, y = y),
-#               colour = "black", linewidth = 0.8) +
-#     geom_vline(xintercept = 0, linetype = "dashed",
-#                colour = "grey50", linewidth = 0.4) +
-#     scale_x_continuous(limits = xlim,
-#                        breaks = c(-0.5, 0, 0.5),
-#                        expand = c(0, 0)) +
-#     scale_y_continuous(limits = ylim,
-#                        breaks = seq(0, 100, 25),
-#                        expand = c(0, 0)) +
-#     panel_grid +                         # shared theme element (see below)
-#     theme(
-#       axis.title    = element_blank(),
-#       axis.text.x   = if (show_x) element_text(size = 7) else element_blank(),
-#       axis.ticks.x  = if (show_x) element_line()         else element_blank(),
-#       axis.text.y   = if (show_y) element_text(size = 7, angle = 0, hjust = 1)
-#       else element_blank(),
-#       axis.ticks.y  = if (show_y) element_line()         else element_blank(),
-#       plot.margin   = margin(2, 4, 2, 2)
-#     )
-#   p
-# }
-# 
-# # ── Shared theme ─────────────────────────────────────────────────────────────
-# panel_grid <- theme_bw() +
-#   theme(panel.grid.major = element_line(colour = "grey90"),
-#         panel.grid.minor = element_blank())
-# 
-# # ── Simulate data (replace with your real a_phi array) ───────────────────────
-# set.seed(42)
-# n_ptp     <- 100
-# var_labels <- c("V1", "V2", "V3", "V4")   # replace with your labels
-# a_phi      <- array(rnorm(4 * 4 * n_ptp, 0, 0.25), dim = c(4, 4, n_ptp))
-# 
-# # ── Build 4×4 grid of panels ─────────────────────────────────────────────────
-# panels <- vector("list", 16)
-# 
-# for (i in 1:4) {
-#   for (j in 1:4) {
-#     vals <- a_phi[i, j, ]
-#     panels[[(i - 1) * 4 + j]] <- make_panel(
-#       vals,
-#       show_x = (i == 4),   # x-axis only on bottom row
-#       show_y = (j == 1)    # y-axis only on left column
-#     )
-#   }
-# }
-# 
-# # ── Column-header labels  (predictor at t-1) ─────────────────────────────────
-# col_labels <- lapply(var_labels, function(lbl) {
-#   ggplot() +
-#     annotate("text", x = 0.5, y = 0.5,
-#              label    = paste0(lbl, " (t\u22121)"),
-#              size     = 3.8, fontface = "bold") +
-#     theme_void() +
-#     theme(plot.margin = margin(0, 0, 0, 0))
-# })
-# 
-# # ── Row-header labels  (outcome at t) ────────────────────────────────────────
-# row_labels <- lapply(var_labels, function(lbl) {
-#   ggplot() +
-#     annotate("text", x = 0.5, y = 0.5,
-#              label    = paste0(lbl, " (t)"),
-#              angle    = 90,
-#              size     = 3.8, fontface = "bold") +
-#     theme_void() +
-#     theme(plot.margin = margin(0, 0, 0, 0))
-# })
-# 
-# # ── Assemble with patchwork ───────────────────────────────────────────────────
-# # Top row: blank corner + 4 column labels
-# top_row <- (plot_spacer() | wrap_plots(col_labels, nrow = 1)) +
-#   plot_layout(widths = c(0.12, 1))
-# 
-# # Content rows: row label + 4 panels
-# make_row <- function(i) {
-#   row_panels <- panels[((i - 1) * 4 + 1):(i * 4)]
-#   (row_labels[[i]] | wrap_plots(row_panels, nrow = 1)) +
-#     plot_layout(widths = c(0.12, 1))
-# }
-# 
-# content_rows <- lapply(1:4, make_row)
-# 
-# # Stack everything
-# final_plot <- (top_row / content_rows[[1]] / content_rows[[2]] /
-#                  content_rows[[3]] / content_rows[[4]]) +
-#   plot_layout(heights = c(0.08, 1, 1, 1, 1))
-# 
-# # ── Save ─────────────────────────────────────────────────────────────────────
-# sc <- 0.95
-# ggsave("Figures/Fig_mlVAR_RE_Distr_phi.pdf",
-#        plot   = final_plot,
-#        width  = 12 * sc,
-#        height = 11 * sc)
-# 
-
-
-
-
-
-
-
-
-
-
-
 
 
 # ----- Intercepts ----
 
 # Get this into an array
-a_int <- array(NA, dim=c(n_ptp, 4))
-for(i in 1:n_ptp) a_int[i, ] <- mlVAR_out$results$mu$subject[[i]]
+m_int <- array(NA, dim=c(n_ptp, 4))
+for(i in 1:n_ptp) m_int[i, ] <- mlVAR_out$results$mu$subject[[i]]
+df <- data.frame(m_int)
 
+# Plotting individual histograms
+l_REplots <- list()
+cnt <- 1
+for(i in 1:4) local({
+  cnt_local <- cnt
+  i_local   <- i
+  xvar      <- colnames(df)[cnt_local]
+  xlim      <- c(-0.7, 0.7)
+  bins      <- 40
+  
+  x <- as.numeric(df[[xvar]])
+  x <- x[is.finite(x)]
+  
+  mu <- mean(x)
+  s  <- sd(x)
+  bw <- diff(xlim) / bins
+  n  <- length(x)
+  
+  l_REplots[[cnt_local]] <<- ggplot(df, aes(x = .data[[xvar]])) +
+    geom_histogram(
+      bins = bins,
+      fill = "steelblue",
+      color = "white",
+      linewidth = 0.3
+    ) +
+    stat_function(
+      fun = function(z) dnorm(z, mean = mu, sd = s) * n * bw,
+      color = "black",
+      linewidth = 1
+    ) +
+    labs(
+      x = "",
+      y = "",
+      title = bquote(alpha[.(i_local)])
+    ) +
+    scale_x_continuous(limits = xlim) +
+    scale_y_continuous(limits = c(0, 20)) +
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.x = element_blank(),
+      plot.margin = margin(2, 2, 2, 2)
+    )
+  
+  cnt <<- cnt + 1
+})
 
 sc <- 0.95
-pdf("Figures/Fig_mlVAR_RE_Distr_intcps.pdf", width=12*sc, height=3.5*sc)
-
-# Layout
-lmat <- matrix(5+(1:4), nrow=1)
-lmat <- cbind(5, lmat)
-lmat <- rbind(0:4, lmat)
-lo <- layout(mat = lmat,
-             heights = c(0.1, 1),
-             widths = c(0.1, 1, 1, 1, 1))
-# layout.show(lo)
-
-# Labels
-for(i in 1:4) PlotLabel(paste0(var_labels[i]))
-PlotLabel("Intercept", srt=90)
-# Data
-
-par(mar=c(4,3,1,1))
-for(i in 1:4) {
-  
-  # Histogram
-  xlim <- c(-1.5, 1.5)
-  ylim=c(0,100)
-  hist_data <- hist(a_int[, i], 
-                    breaks=seq(xlim[1], xlim[2], length=40), 
-                    xlim=c(xlim[1], xlim[2]), 
-                    main="", xlab="", axes=F, ylim=c(0,100))
-  grid()
-  hist(a_int[, i], 
-       breaks=seq(xlim[1], xlim[2], length=40), 
-       xlim=c(xlim[1], xlim[2]), 
-       main="", xlab="", axes=F, add=TRUE, ylim=c(0,100))
-  axis(1)
-  axis(2, las=2)
-  
-  # Density plot
-  x_seq <- seq(xlim[1], xlim[2], length=1000)
-  gauss_den <- dnorm(x_seq,
-                     mean = mean(a_int[, i], na.rm = TRUE),
-                     sd = sd(a_int[, i], na.rm = TRUE))
-  
-  lines(x_seq, gauss_den * length(a_int[, i]) * diff(hist_data$breaks)[1], 
-        col = "black", lwd = 2)
-  
-} # end for: loop over phi
-
+pdf("Figures/Fig_mlVAR_RE_Distr_intcps_ggplot.pdf", width=12*sc, height=3.5*sc)
+wrap_plots(l_REplots, ncol = 4, nrow = 1, byrow = TRUE)
 dev.off()
-
-
 
 
