@@ -1,16 +1,10 @@
-# jonashaslbeck@protonmail.com
+# jonashaslbeck@protonmail.com; March 2026
 
 # ------------------------------------------
 # -------- What is happening here? ---------
 # ------------------------------------------
 
-# This file contains helper functions to:
-# - Perform Residual Analysis and Simulate Data from AR(1) models
-# - Perform Residual Analysis and Simulate Data from (ml)VAR(1) models
-# - Perform Residual analysis for HMM models
-# - Plotting functions
-# - Simulate data from (ml)VAR(1) models
-# - Perform HAC test for time trends
+# Helper functions for plotting, computing residuals and simulating for the model from the DSEM model, computing residuals for the HMM,  computing summaries on the residuals, and some other smaller tasks.
 
 # ------------------------------------------
 # -------- Loading Packages ----------------
@@ -377,6 +371,60 @@ PlotDiagnosticsSim <- function(l_out, # object with data
 } # End of ggplot function
 
 
+# ------------------------------------------
+# -------- Plot Single Time Series Panel ---
+# ------------------------------------------
+# This is used to plot the individual pieces of figure 1
+
+Plot1Panel <- function(df) {
+  
+  ylim = c(-5, 5)
+  
+  # Plot 1: Line plot data + predictions
+  plot_line <- ggplot(df, aes(time, x)) +
+    geom_line(aes(y = x, color = "Empirical"), linewidth = 0.5) +
+    theme_minimal() + 
+    coord_cartesian(ylim = ylim) + 
+    scale_color_manual(
+      values = c(
+        "Empirical" = "black",
+        "Predictions" = "darkorange2"
+      )
+    ) +
+    theme(
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      legend.position = if (legend) legend.position else "none",
+      legend.spacing.y = unit(0.04, "cm"),
+      legend.key.height = unit(0.4, "cm"),
+      legend.title = element_blank()
+    )
+  
+  # histogram of y
+  mu <- mean(df$x, na.rm = TRUE)
+  sd <- sd(df$x, na.rm = TRUE)
+  p_hist <- ggplot(df, aes(x)) +
+    geom_histogram(aes(y = after_stat(density)), bins = 20, fill = "grey50") +
+    coord_flip(xlim = ylim) +
+    theme_minimal() +
+    stat_function(
+      fun = dnorm,
+      args = list(mean = mu, sd = sd),
+      linewidth = 1
+    ) +
+    theme(
+      axis.title.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.title.x = element_blank(),
+      panel.grid = element_blank()
+    )
+  
+  plot_line + p_hist +  plot_layout(widths = c(4,1))
+  
+} # eoF
 
 
 # ------------------------------------------
@@ -472,6 +520,7 @@ f_pdb <- function(dayvar, beepvar) {
   }
   return(v_pdb)
 } #eoF
+
 
 # -------------------------------------------------
 # -------- Residual Analysis ----------------------

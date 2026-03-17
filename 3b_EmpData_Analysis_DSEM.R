@@ -4,8 +4,25 @@
 # -------- What is happening here? ---------
 # ------------------------------------------
 
-# Here we:
-# TODO: Explain what is happening & acknowledge that it is horrible!
+# Below we take the DSEM output form Mplus and create the same diagnostic plots as for the mlVAR
+# analysis shown in the main text. This is currently not very convenient. The steps are:
+# 1) Specifying and fitting the model in Mplus
+# 2) Loading the results into R using the R-package MplusAutomation
+# 3) A lot of custom code to get the Mplus output into workable objects
+# 4) R-function to make predictions & compute residuals
+# 5) R-function to simulate data from the estimated model
+# 6) Plotting functions
+
+# Steps 1-5 are more convenient with the mlVAR package, where these steps are not necessary or
+# are taken care of with new functions (?predict, ?residuals, ?resimulate). This is not an 
+# endorsement of the more restrictive and somewhat problematic mlVAR package, but a call to 
+# improve the pipeline for DSEM/Mplus
+
+# Below are additional comments on the DSEM/Mplus pipeline from Joran Jongerling (who worked out the below), 
+# which might be useful to researchers trying to adapt the below to their own project:
+
+# While running diagnostics on (individual) predictions and parameters using Mplus results researchers need to keep a few things in mind. First, when interested in checks on the standardized scale, Mplus does not provide standardized estimates for individual means of variables. These need to be calculated manually by subtracting the fixed effect for the (overall) means of variables from the unstandardized individual means and subsequently dividing these differences by the standard deviations of the variables. Second, Mplus standardizes individual lagged effects in a method unlike most other software, in that it standardizes results per person using person-specific standard deviations of variables (like one would do with N = 1 analyses). The standardized fixed effects are the means of the individual, per-person standardized, estimates (see Schuurman et al, 2016 Psychological Methods). This is important when calculating individual predicted scores as one has to standardize the data used for predictions per person as well. Thirdly, the order of the individual effects in the Mplus output might not be the same as the order of individuals in the original dataset. Researchers are therefore well advised to check the ID column in the files with individual effects and re-sorting them to match the original data if needed. Finally, in Bayesian analyses, individual effects are actual parameters of the model unlike in Frequentist analyses (where they are empirical Bayes estimates). As a result the Mplus analyses allow for (and require) checks of this additional set of parameters as well. At the very least researchers should check the posteriors for these individual parameters to make sure there are no bimodal distributions or other issues that imply that summarizing the posterior in a single point-estimate is not a good idea. This is especially important since the Mplus output does not necessarily give warning when one or more posteriors of individual parameters are ill-behaved (due to very skewed individual data for example.
+
 
 # ------------------------------------------
 # -------- Load Packages & Source ----------
@@ -32,6 +49,7 @@ library(rhdf5)
 
 # Helper functions
 source("0_Helpers.R")
+
 
 # ------------------------------------------
 # -------- Load Data -----------------------
@@ -336,14 +354,6 @@ model_mplus <- list(vars = vars,
 model_mplus_std <- list(vars = vars, 
                         Ind_phi = Ind_phi_std,
                         Ind_mu = Ind_mu_std)
-
-
-# # Sanity check: empirical means vs. model-implied means
-# em_means <- ddply(data, .(id), colMeans, na.rm=T)
-# head(em_means)
-# dim(Ind_mu)
-# plot(em_means$happy, Ind_mu[, 1])
-
 
 
 # ------------------------------------------
