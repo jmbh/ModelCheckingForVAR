@@ -10,7 +10,6 @@
 # -------- Loading Packages ----------------
 # ------------------------------------------
 
-library(scales)
 
 
 # ------------------------------------------
@@ -23,10 +22,11 @@ Plot1Row <- function(emp,
                      sim,
                      legpos = "topleft", 
                      ylim_data = NULL, 
-                     ylim_res = NULL, 
+                     ylim_res = NULL,
+                     posR2 = NULL,
+                     posAR = NULL,
                      legend = TRUE, 
                      label_size = 5) {
-  
   
   # Settings
   linewidth = 0.35
@@ -53,11 +53,11 @@ Plot1Row <- function(emp,
     geom_line(aes(y = pred, color = "Predictions"), linewidth = linewidth) +
     annotate(
       "text",
-      x = 180,
-      y = 100,
+      x = posR2[1],
+      y = posR2[2],
       label = paste0("R^2==", round(R2, 2)),
       parse=TRUE,
-      size = 2
+      size = 2.75
     ) +
     theme_minimal() + 
     coord_cartesian(ylim = ylim_data) + 
@@ -115,10 +115,10 @@ Plot1Row <- function(emp,
     ) + 
     annotate(
       "text",
-      x = 110,
-      y = -55,
+      x = posAR[1],
+      y = posAR[2],
       label = paste0("AR(1): ", Pnt, ", 95%CI: [", CIs[1], ", ", CIs[2], "]"),
-      size = 2
+      size = 2.75
     )
   
   mu <- mean(df_i$res, na.rm = TRUE)
@@ -205,7 +205,9 @@ PlotDiagnosticsEmp <- function(l_ResObj,
                                v_legend,
                                legpos = "topleft", 
                                ylim_data = c(0,100), 
-                               ylim_res = c(-60, 60), 
+                               ylim_res = c(-60, 60),
+                               posR2 = c(180, 100),
+                               posAR = c(110, -55),
                                label_size = 5) {
   
   # Storing plots
@@ -217,6 +219,8 @@ PlotDiagnosticsEmp <- function(l_ResObj,
                                              legpos = legpos,
                                              ylim_data = ylim_data,
                                              ylim_res = ylim_res,
+                                             posR2 = posR2,
+                                             posAR = posAR,
                                              legend = v_legend[j])
   
   # Create labels
@@ -275,6 +279,8 @@ PlotDiagnosticsSim <- function(l_out, # object with data
                                v_legend,
                                ylim_data = c(-4,4), 
                                ylim_res = c(-4,4), 
+                               posR2 = c(180, 4),
+                               posAR = c(110, -3.5),
                                label_size = 5) {
   
   n_row <- length(sel)
@@ -288,6 +294,9 @@ PlotDiagnosticsSim <- function(l_out, # object with data
                                                  legpos = legpos, 
                                                  ylim_data = ylim_data, 
                                                  ylim_res = ylim_res, 
+                                                 posR2 = posR2,
+                                                 
+                                                 posAR = posAR,
                                                  legend = v_legend[j])
   
   # Create labels

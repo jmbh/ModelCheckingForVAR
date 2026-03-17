@@ -13,6 +13,10 @@
 
 # For Plotting
 library(RColorBrewer)
+library(scales)
+library(ggplot2)
+library(patchwork)
+
 
 # Fitting HMMs
 library(depmixS4)
@@ -183,7 +187,7 @@ fitAR1_3$RMSE
 # ----- Figure: Correctly specified AR(1) -------
 # -----------------------------------------------
 
-pdf("Figures/Fig_AR1_Correct_ggplot.pdf",  width=11, height=6)
+pdf("Figures/Simulated/Fig_AR1_Correct_ggplot.pdf",  width=11, height=6)
 PlotDiagnosticsSim(l_out = l_out, 
                    sel = 1:2, 
                    labels = c("Dependence", "Independence"), 
@@ -198,7 +202,7 @@ dev.off()
 # ----- Figure: Three Main Misspecifications ----
 # -----------------------------------------------
 
-pdf("Figures/Fig_AR1_Misspecified_Main_ggplot.pdf",  width=11, height=8)
+pdf("Figures/Simulated/Fig_AR1_Misspecified_Main_ggplot.pdf",  width=11, height=8)
 PlotDiagnosticsSim(l_out = l_out, 
                    sel = c(4,3,5), 
                    labels = c("Trend", "Switching/Non-Linear", "Changing Innovations"), 
@@ -212,7 +216,7 @@ dev.off()
 # ----- Figure: Three Extra Misspecifications ---
 # -----------------------------------------------
 
-pdf("Figures/Fig_AR1_Misspecified_Extra_ggplot.pdf",  width=11, height=8)
+pdf("Figures/Simulated/Fig_AR1_Misspecified_Extra_ggplot.pdf",  width=11, height=8)
 PlotDiagnosticsSim(l_out = l_out, 
                    sel = 6:8, 
                    labels = c("Seasonality", "State-Dependent Innovations", "Non-Gaussian Innovations"), 
@@ -232,7 +236,7 @@ dev.off()
 mod <- depmix(response = l_synth[[4]] ~ 1,
               family = gaussian(),
               nstates = 2,
-              data = data.frame(x=x))
+              data = data.frame(x=l_synth[[4]]))
 fit <- fit(mod)
 
 
@@ -254,7 +258,7 @@ l_out_hmm[[1]] <- list(x = l_synth[[4]],
                      res = out$Res,
                      xsim = sim_data)
 
-pdf("Figures/Fig_HMM_ModelFit_ggplot.pdf",  width=11, height=3)
+pdf("Figures/Simulated/Fig_HMM_ModelFit_ggplot.pdf",  width=11, height=3)
 PlotDiagnosticsSim(l_out = l_out_hmm, 
                    sel = 1, 
                    labels = c(""), 
