@@ -1,0 +1,93 @@
+TITLE:  DSEM - challenge stressors - work engagement
+
+  DATA:
+    FILE IS "data_new.csv";
+
+  VARIABLE:
+    NAMES = ID Beep Day Happy Relax Sad Angry;
+
+    CLUSTER = ID;
+
+    USEVARIABLES = Happy Relax Sad Angry;
+
+    TINTERVAL = Beep(1);
+
+    lagged = Happy(1) Relax(1) Sad(1) Angry(1);
+
+    MISSING = ALL (-999.00);
+
+
+  ANALYSIS:
+    TYPE = TWOLEVEL RANDOM;
+    estimator=bayes;
+    FBITER= 15000;
+    !bseed = 50;
+    PROCESSORS = 4;
+
+    !STVAL = ML;
+
+  MODEL:
+
+  %WITHIN%
+  
+  Happy WITH Relax Sad Angry;
+  Relax WITH Sad Angry;
+  Sad WITH Angry; 
+
+  !Happy with Relax; X1 with Y
+   ARhappy | Happy ON Happy&1;
+   ARrelax | Relax ON Relax&1;
+   CLrelhap | Happy ON Relax&1;
+   CLhaprel | Relax ON Happy&1;
+   
+  !Sad with Relax; X2 with Y;
+   ARsad | Sad ON Sad&1;
+   CLrelsad | Sad ON Relax&1;
+   CLsadrel | Relax ON Sad&1;
+  
+  !Angry with Relax;X3 with Y;
+   ARangry | Angry ON Angry&1;
+   CLrelang | Angry ON Relax&1;
+   CLangrel | Relax ON Angry&1;
+
+  !Happy with Sad;
+   CLsadhap | Happy ON Sad&1;
+   CLhapsad | Sad ON Happy&1;
+
+  !Happy with Angry;
+   CLanghap | Happy ON Angry&1;
+   CLhapang | Angry ON Happy&1;
+
+  !Sad with Angry;
+   CLangsad | Sad ON Angry&1;
+   CLsadang | Angry ON Sad&1;
+
+  
+  %BETWEEN%
+  Happy WITH Relax Sad Angry;
+  Relax WITH Sad Angry;
+  Sad WITH Angry;
+  
+  [Happy];
+  [Relax];
+  [Sad];
+  [Angry];
+  
+  ARhappy ARrelax CLrelhap CLhaprel;   
+  ARsad CLrelsad CLsadrel;   
+  ARangry CLrelang CLangrel;
+  CLsadhap CLhapsad; 
+  CLanghap CLhapang;
+  CLangsad CLsadang;
+
+  OUTPUT: TECH1 TECH8 STDYX(CLUSTER) RESIDUAL(CLUSTER) FSCOMPARISON;
+  PLOT: TYPE = PLOT2;
+  
+  SAVEDATA: 
+     STDDISTRIBUTION = EEM_stdd_rp.dat;
+     FILE IS EEMrp.dat;
+     SAVE = FSCORES(50, 10);
+     BPARAMETERS = bayes_eem_rp.dat;
+     !PLOT: !TYPE = PLOT3;
+     !FACTORS = ALL;
+  

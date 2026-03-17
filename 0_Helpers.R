@@ -476,16 +476,14 @@ f_pdb <- function(dayvar, beepvar) {
 # -------------------------------------------------
 # -------- Residual Analysis ----------------------
 # -------------------------------------------------
-
-# TODO: UPdate: This is now only for Mplus
+# This is purely for Mplus/DSEM
+# The new mlVAR package version coming with the paper 
+# has the build-in functions predict() and residuals()
 
 ResAnalysis <- function(model,
                         data = data,
                         subject) {
   
-  # ------------------------
-  # ----- 3) Mplus ---------
-  # ------------------------
   
   # ---- Some Basic info ----
   u_pers <- unique(data$id)
@@ -499,11 +497,6 @@ ResAnalysis <- function(model,
   # ---- Prepare data ----
   # Subset Data
   data_j <- data[data$id==u_pers[subject], ]
-  # Within-person scale data
-  # Joran: Mplus: Within-person scaling to match standardized coefficients
-  
-  data_j_sc <- data_j
-  data_j_sc[, vars] <- apply(data_j[, vars], 2, scale)
   N <- nrow(data_j)
   
   # Find out which data points are predictable by VAR(1)
@@ -514,9 +507,8 @@ ResAnalysis <- function(model,
   
   for(i in 1:p) {
     ## Compute Residuals
-    emp <- data_j_sc[, vars[i]] # Empirical Data
-    pred <- intc[i] + rowSums(as.matrix(data_j_sc[, vars]) %*% matrix(phi_1[i, ], nrow=p) )
-    
+    emp <- data_j[, vars[i]] # Empirical Data
+    pred <- intc[i] + rowSums(as.matrix(data_j[, vars]) %*% matrix(phi_1[i, ], nrow=p) )
     pred[pdb_j==FALSE] <- NA # Flag time points for which predictions are not possible at lag1
     res <- emp - pred # Residuals
     
@@ -556,67 +548,35 @@ ResAnalysis <- function(model,
 } # eoF
 
 
-
-
 # -------------------------------------------------
 # -------- PPC: Simulate Data ---------------------
 # -------------------------------------------------
+# This is purely used for Mplus/DSEM
+# The new mlVAR package version coming with the paper 
+# has the build-in function resimulate()
 
 SimPPC <- function(data,
                    model,
-                   subject,
                    ResObj,
-                   init,
-                   Nt) {
+                   subject) {
+  
+  # Get Sample size for person
+  u_ptp <- unique(data$id)
+  data_j <- data[data$id == u_ptp[subject], ]
+  Nt <- nrow(data_j)
   
   # ---- Get Parameters for Given Subject -----
-  if(class(model) == "mlVAR") {
-    
-    # Get Lagged effects
-    phi_1 <- getNet(model, 
-                    type = "temporal", 
-                    subject = subject, 
-                    verbose = FALSE)
-    # Get the intercepts
-    # mu_1 <- model$results$mu$subject[[subject]]
-    # intc <- mu_1 # Those are intercepts
-    
-    # --- Rescale regression coefficients back to [0, 100]-scale ---
-    # TO FIX: The below is roughly correct, but not exactly, because:
-    # - mlVAR might rescale slightly differently
-    # - There might be some interaction between scaling and mixed effects estimation
-    # - Unknown unknowns in mlVAR
-    
-    # Get standard deviations of all variables across whole dataset
-    sds <- apply(data[, c("happy", "relaxed", "sad", "angry")], 2, sd, na.rm=TRUE)
-    # Rescaling with matrix calc; parameter wise I rescale with fraction: sd_predicted / sd_predictor
-    D <- diag(sds)
-    phi_1_resc <- D %*% phi_1 %*% solve(D)
-    phi_1 <- phi_1_resc
-    
-    # Compute sample mean
-    u_ptp <- unique(data$id)
-    data_j <- data[data$id == u_ptp[[subject]], c("happy", "relaxed", "sad", "angry")]
-    mu_emp <- apply(data_j[, c("happy", "relaxed", "sad", "angry")], 2, mean, na.rm=TRUE)
-    # Compute Intercept
-    intc <- (diag(4) - phi_1_resc) %*% mu_emp
-    
-  } else {
-    phi_1 <- model$Ind_phi[,,subject] 
-    intc <- model$Ind_mu[subject,] 
-  }
-  
+    phi_1 <- model$Ind_phi[ , , subject] 
+    intc <- model$Ind_mu[subject, ] 
+
   # ---- Get Residual Variance ----
   m_res <- ResObj[[subject]]$ResVar
-  
-  # browser()
   
   # ---- Simulate Data -----
   data_sim <- simulateVAR(pars = phi_1,
                           means = as.numeric(intc),
                           Nt = Nt,
                           residuals = m_res) # residual variance = 1
-  
   
   # ---- Compile Outlist -----
   outlist <- list("data_emp" =  ResObj[[subject]]$Emp,
@@ -687,3 +647,5 @@ Trend <- function(x) {
   sum_obj <- summary(lm_obj)
   return(sum_obj$coefficients[2, 4] < 0.05)
 }
+
+
