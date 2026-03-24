@@ -150,6 +150,14 @@ for(i in 1:3) {
   dev.off()
 }
 
+# Get prediction errors for paper
+round(l_ResObj[[6]]$R2, 2)
+round(l_ResObj[[6]]$RMSE)
+round(l_ResObj[[133]]$R2, 2)
+round(l_ResObj[[133]]$RMSE)
+round(l_ResObj[[33]]$R2, 2)
+round(l_ResObj[[33]]$RMSE)
+
 
 
 # ----- ALL (for repository) ------
@@ -187,14 +195,14 @@ m_stats <- as.data.frame(matrix(NA, N, 4))
 colnames(m_stats) <- c("RMSSD_emp", "RMSSD_sim", "mode_emp", "mode_sim")
 for(i in 1:N) {
   # RMSSD (not shown in the paper)
-  m_stats$RMSSD_emp[i] <- mean(apply(l_stats[[i]]$data_emp, 2, RMSSD))
+  m_stats$RMSSD_emp[i] <- mean(apply(l_ResObj[[i]]$Emp, 2, RMSSD))
   m_stats$RMSSD_sim[i] <- mean(apply(l_stats[[i]]$data_sim, 2, RMSSD))
   # Modes
-  m_stats$mode_emp[i] <- mean(apply(l_stats[[i]]$data_emp, 2, is_bimodal))
+  m_stats$mode_emp[i] <- mean(apply(l_ResObj[[i]]$Emp, 2, is_bimodal))
   m_stats$mode_sim[i] <- mean(apply(l_stats[[i]]$data_sim, 2, is_bimodal))
   # Trend
   alpha <- 0.05
-  l_trends_emp[[i]] <- apply(l_stats[[i]]$data_emp, 2, trend_test_hac) < alpha
+  l_trends_emp[[i]] <- apply(l_ResObj[[i]]$Emp, 2, trend_test_hac) < alpha
   l_trends_sim[[i]] <- apply(l_stats[[i]]$data_sim, 2, trend_test_hac) < alpha
 }
 # Numers reported in the paper:

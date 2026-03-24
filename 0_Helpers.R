@@ -57,7 +57,7 @@ Plot1Row <- function(emp,
       y = posR2[2],
       label = paste0("R^2==", round(R2, 2)),
       parse=TRUE,
-      size = 2.75
+      size = 2.5
     ) +
     theme_minimal() + 
     coord_cartesian(ylim = ylim_data) + 
@@ -118,7 +118,7 @@ Plot1Row <- function(emp,
       x = posAR[1],
       y = posAR[2],
       label = paste0("AR(1): ", Pnt, ", 95%CI: [", CIs[1], ", ", CIs[2], "]"),
-      size = 2.75
+      size = 2.5
     )
   
   mu <- mean(df_i$res, na.rm = TRUE)

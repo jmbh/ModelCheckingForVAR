@@ -205,7 +205,7 @@ dev.off()
 pdf("Figures/Simulated/Fig_AR1_Misspecified_Main_ggplot.pdf",  width=11, height=8)
 PlotDiagnosticsSim(l_out = l_out, 
                    sel = c(4,3,5), 
-                   labels = c("Trend", "Switching/Non-Linear", "Changing Innovations"), 
+                   labels = c("Switching/Non-Linear", "Trend", "Changing Innovations"), 
                    legpos = "topleft", 
                    ylim_data = c(-4,4), 
                    ylim_res = c(-4,4), 
