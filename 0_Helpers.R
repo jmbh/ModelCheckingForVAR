@@ -6,10 +6,10 @@
 
 # Helper functions for plotting, computing residuals and simulating for the model from the DSEM model, computing residuals for the HMM,  computing summaries on the residuals, and some other smaller tasks.
 
+
 # ------------------------------------------
 # -------- Loading Packages ----------------
 # ------------------------------------------
-
 
 
 # ------------------------------------------
@@ -145,15 +145,16 @@ Plot1Row <- function(emp,
   p_line_res+p_hist_res
   
   # ---- Panel C: Scatter Plot:
-  p_scatter <- ggplot(df_i, aes(x = res, y = pred)) +
+  p_scatter <- ggplot(df_i, aes(x = pred, y = res)) +
     geom_point(alpha = 0.4) + 
     theme_minimal() +
-    coord_cartesian(ylim = ylim_data, 
-                    xlim = ylim_res) + 
+    coord_cartesian(ylim = ylim_res, 
+                    xlim = ylim_data) + 
     theme(
       axis.title.x = element_blank(),
       axis.title.y = element_blank()
     )
+  
   # ---- Panel D: Data Simulated from Estimated Model
   p_line_sim <- ggplot(df_i, aes(time, sim)) +
     geom_line(linewidth = linewidth) +
@@ -194,6 +195,7 @@ Plot1Row <- function(emp,
   return(outlist)
   
 } # EoF
+
 
 # ------------------------------------------
 # -------- Diagnostic Plots (Empirical) ----

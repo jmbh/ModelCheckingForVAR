@@ -1,4 +1,4 @@
-# jonashaslbeck@protonmail.com; March 2026
+# jonashaslbeck@protonmail.com; June 2026
 
 # ------------------------------------------
 # -------- What is happening here? ---------
@@ -19,7 +19,6 @@ library(devtools)
 # install_github("SachaEpskamp/mlVAR") # Needed for residuals in output
 library(mlVAR)
 
-
 # Wrangling
 library(tidyr)
 library(dplyr)
@@ -30,6 +29,8 @@ library(RColorBrewer)
 library(qgraph)
 library(ggplot2)
 library(patchwork)
+# install_github("bsiepe/VARcheck")
+library(VARcheck)
 
 # For testing trends
 library(lmtest)
@@ -37,12 +38,12 @@ library(sandwich)
 
 source("0_Helpers.R")
 
+
 # ------------------------------------------
 # -------- Load Data -----------------------
 # ------------------------------------------
 
 data <- readRDS("Data/Grommisch2020_subset.RDS")
-
 
 # ------------------------------------------
 # -------- Overview ------------------------
@@ -78,8 +79,11 @@ labels <- capitalize_first(colnames(data)[4:7])
 # We load the estimated model
 mlVAR_out <- readRDS("Files/Mod_Paper_mlVAR_Grommisch.RDS")
 
-# residuals(mlVAR_out)
-# predict(mlVAR_out)
+
+# Note: Here we still use custom functions for plotting which you can find in 0_Helpers.R
+# In the meantime, we created the R-package VARcheck, which packages these functions and makes
+# is much easier to reuse them. 
+# For details see there: https://bsiepe.github.io/VARcheck/articles/getting-started.html
 
 # ------------------------------------------
 # -------- Compute Residuals ---------------
